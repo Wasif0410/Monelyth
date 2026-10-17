@@ -24,6 +24,23 @@ MONELYTH_TOKEN=$(python -c "import secrets; print(secrets.token_hex(32))") \
 It prints `MONELYTH_READY {"port": 8765, "version": "..."}` once it is listening. Requests need
 `Authorization: Bearer <token>`.
 
+## HTTP API
+
+Every route needs `Authorization: Bearer <token>`. Errors the user should see come back as
+`{"detail": "<message>"}`.
+
+| Route | Purpose |
+|---|---|
+| `GET /health` | Liveness and version |
+| `GET /accounts`, `POST /accounts` | List and add accounts |
+| `GET /categories` | Default and user categories |
+| `POST /imports/preview` | Upload a statement (multipart `file`); returns the detected format, CSV layout and open questions, and the first rows. Saves nothing |
+| `POST /imports` | Upload it again with `account_id` (and the confirmed CSV `layout` as JSON) to store it. `409` if the exact file was imported before; overlapping rows are skipped |
+| `GET /transactions` | Filter by `account_id`, `date_from`, `date_to`, `category_id`, `q`; paged with `limit`/`offset` |
+| `PATCH /transactions/{id}` | Set the category and/or merchant name (marked as the user's choice) |
+
+Sample statements to try it with are in [`../sample-data/`](../sample-data/).
+
 ## Command-line options
 
 | Option | Default | Purpose |

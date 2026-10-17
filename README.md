@@ -4,8 +4,9 @@
 and ask questions about it, with an AI model that runs entirely on your computer. Your data
 never leaves your machine.
 
-> **Status:** early development (Phase 0 of [the build plan](PLAN.md)). The desktop shell,
-> the local engine and the Windows installer work end to end. Features start in Phase 1.
+> **Status:** early development. Phases 0 and 1 of [the build plan](PLAN.md) are done: the
+> desktop shell, the Windows installer and the engine's data layer, which imports CSV and OFX
+> statements, cleans merchant names and skips duplicates. The screens for it come in Phase 2.
 
 ## How it works
 
@@ -14,7 +15,7 @@ never leaves your machine.
 | Desktop shell | Tauri 2 (Rust) | Opens the window; starts, supervises and stops the engine |
 | UI | React, TypeScript, Tailwind | Everything you see |
 | Engine | Python, FastAPI | Statement import, categorization, insights, AI chat |
-| Storage | SQLite (from Phase 1) | One file on your computer |
+| Storage | SQLite | One file on your computer |
 
 The engine listens on `127.0.0.1` only and rejects every request without a random token the
 shell creates on each launch. The UI is locked down by a Content Security Policy, so it cannot

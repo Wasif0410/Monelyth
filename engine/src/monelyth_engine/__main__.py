@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import socket
+import sqlite3
 import sys
 import threading
 from collections.abc import Sequence
@@ -27,6 +28,7 @@ import uvicorn
 from monelyth_engine import __version__
 from monelyth_engine.app import create_app
 from monelyth_engine.config import HOST, ConfigError, Settings, load_settings
+from monelyth_engine.db.errors import SchemaVersionError
 
 READY_PREFIX: Final = "MONELYTH_READY"
 SHUTDOWN_COMMAND: Final = b"shutdown"
@@ -45,7 +47,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     _configure_logging(settings.log_level)
     try:
         return _serve(settings)
-    except OSError:
+    except SchemaVersionError as error:
+        logger.error("Engine failed to start: %s", error)
+        return 1
+    except (OSError, sqlite3.Error):
         logger.exception("Engine failed to start")
         return 1
 
