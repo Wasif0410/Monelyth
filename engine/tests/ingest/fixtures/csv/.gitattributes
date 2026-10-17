@@ -1,0 +1,2 @@
+# Fixtures are byte-exact bank exports (CRLF line endings, Windows-1252 text): keep them as is.
+* -text
