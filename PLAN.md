@@ -239,7 +239,7 @@ Each step has a checkbox so you can track progress in this file.
 
 **Effort:** ~1 week
 
-> **Status (2026-10-17):** built and verified locally. The installer builds, the installed UI reaches the engine, and the engine stops with the app. Still open: Ollama (not needed until Phase 3), a clean-machine test in Windows Sandbox (0.6), and a first CI run, which needs the repo pushed to GitHub (0.7).
+> **Status (2026-10-17):** built and verified locally. The installer builds, the installed UI reaches the engine, and the engine stops with the app. CI is green on GitHub (merged in PR #1). Still open: Ollama (not needed until Phase 3) and a clean-machine test in Windows Sandbox (0.6).
 
 - [ ] **0.1 Install the toolchain**
   - Git, Python 3.12+ and [`uv`](https://docs.astral.sh/uv/) (fast Python package/env manager), Node 22 LTS and `pnpm`, Rust via `rustup`, and the Microsoft C++ Build Tools (Tauri needs them on Windows). WebView2, which Tauri uses to draw the UI, is already installed on Windows 11.
@@ -265,7 +265,7 @@ Each step has a checkbox so you can track progress in this file.
   - Build the engine into one `.exe` with PyInstaller (`--onefile` to start; it's the easiest fit with `externalBin`). Copy it into `src-tauri/binaries/` under the platform name.
   - `pnpm tauri build` → NSIS installer (`Monelyth_0.0.1_x64-setup.exe`).
   - Test it in **Windows Sandbox** (a built-in, throwaway clean copy of Windows; enable it under "Turn Windows features on or off"). Install, launch, and confirm the green badge.
-- [ ] **0.7 Continuous integration**
+- [x] **0.7 Continuous integration**
   - A GitHub Actions workflow on `windows-latest` that, on every push, runs ruff, pyright, pytest, the frontend type-check and tests, and builds the installer as a downloadable artifact.
 
 **Done when:** the installer that CI builds installs on a clean Windows Sandbox and shows "Engine connected."
@@ -278,14 +278,16 @@ Each step has a checkbox so you can track progress in this file.
 
 **Effort:** ~2 weeks
 
-- [ ] **1.1 Database setup**
+> **Status (2026-10-17):** done. Built as four parallel pieces against shared types in `ingest/models.py`, then wired together by `services/importing.py` and the routes in `api/`. The done-when check is an automated test (`tests/api/test_imports.py::test_phase_1_done_when_importing_twice_adds_nothing`), and the sidecar smoke test imports a CSV and previews an OFX file through the frozen executable. Known limitation: CSV and OFX exports of the *same* account don't deduplicate against each other (OFX rows are keyed by the bank's `FITID`, CSV rows by their contents), so pick one format per account.
+
+- [x] **1.1 Database setup**
   - Open SQLite with `PRAGMA journal_mode=WAL` (lets reads and writes happen at the same time) and `PRAGMA foreign_keys=ON` (SQLite has it off by default).
   - Write the migration runner described in [Data model](#4-data-model) and `001_init.sql` with the tables above.
   - Seed the default categories: Salary, Other Income, Rent/Mortgage, Utilities, Groceries, Dining Out, Coffee, Transport, Gas, Rideshare, Shopping, Subscriptions, Entertainment, Health, Education, Travel, Fees & Interest, Gifts & Donations, Transfers, Other.
-- [ ] **1.2 Sample data generator** (`engine/scripts/generate_sample_data.py`)
+- [x] **1.2 Sample data generator** (`engine/scripts/generate_sample_data.py`)
   - Uses `Faker` plus hand-written merchant lists to produce 12 months of realistic CSVs for a fake checking account and a fake credit card: bi-weekly salary, monthly rent, groceries, coffee, subscriptions on fixed days, credit card payments (transfers), random one-offs.
   - Also writes a `labels.csv` with the correct category for each row. You'll use this for tests, screenshots, the LinkedIn demo, and a "Try with demo data" button.
-- [ ] **1.3 CSV importer** (`ingest/csv.py`)
+- [x] **1.3 CSV importer** (`ingest/csv_statement.py`)
   - **Encoding:** try `utf-8-sig` (UTF-8 with Excel's hidden marker), then `cp1252` (common in older Windows exports).
   - **Delimiter:** let `csv.Sniffer` detect comma, semicolon or tab.
   - **Header row:** some banks put account info above the real header; find the first row that looks like column names.
@@ -293,16 +295,16 @@ Each step has a checkbox so you can track progress in this file.
   - **Dates:** try a list of formats (`%Y-%m-%d`, `%m/%d/%Y`, `%d/%m/%Y`, `%b %d, %Y`, ...) and keep the one that parses every row. If both `MM/DD` and `DD/MM` work (all days ≤ 12), ask the user.
   - **Amounts:** handle one amount column or separate debit/credit columns, `$1,234.56`, `(12.99)` meaning negative, `CR`/`DR` suffixes, and credit cards where purchases are positive.
   - **Profiles:** save the confirmed mapping in `csv_profiles` keyed by a hash of the header row, so the second import from the same bank needs no questions.
-- [ ] **1.4 OFX/QFX importer** (`ingest/ofx.py`)
+- [x] **1.4 OFX/QFX importer** (`ingest/ofx_statement.py`)
   - Use the `ofxtools` library. OFX is the structured format that "Download for Quicken/Money" buttons produce. Each transaction has an `FITID` (a unique ID from the bank), which makes deduplication exact.
-- [ ] **1.5 Deduplication**
+- [x] **1.5 Deduplication**
   - **Whole file:** reject a file whose SHA-256 hash is already in `imports`.
   - **Single transactions:** statements overlap (a Sept 1–30 export and a Sept 15–Oct 15 export share two weeks). Fingerprint = `sha256(account_id | date | amount | description_raw | n)`, where `n` counts identical rows within the same file. That way two real $5 coffees on the same day both stay, but the same coffee imported twice is skipped. For OFX, use the `FITID` instead.
-- [ ] **1.6 Merchant name cleaning** (`normalize/`)
+- [x] **1.6 Merchant name cleaning** (`normalize/`)
   - Turns `SQ *BLUE BOTTLE 0423 TORONTO ON` into `Blue Bottle`.
   - Steps: lowercase → strip payment-processor prefixes (`sq *`, `tst*`, `paypal *`, `pos `, `visa debit pur`, ...) → strip card numbers, store numbers (`#1234`), and trailing city/province codes → collapse spaces → look up an alias table (`amzn mktp` → `Amazon`) → title-case for display.
   - Test with a table of about 50 real-looking `raw → expected` pairs.
-- [ ] **1.7 API routes**
+- [x] **1.7 API routes**
   - `POST /accounts`, `GET /accounts`
   - `POST /imports/preview`: upload a file, get back the detected format, column mapping and first 10 parsed rows. Nothing is saved yet.
   - `POST /imports`: confirm and save. Returns how many rows were added and how many duplicates were skipped.

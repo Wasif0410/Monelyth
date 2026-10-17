@@ -7,12 +7,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from monelyth_engine import __version__
-from monelyth_engine.api import health
+from monelyth_engine.api import accounts, categories, health, imports, transactions
+from monelyth_engine.api.errors import install_error_handlers
 from monelyth_engine.config import HOST, Settings
+from monelyth_engine.database import Database
 from monelyth_engine.security import BearerTokenMiddleware
 
 
 def create_app(settings: Settings) -> FastAPI:
+    """Build the app and open (creating or migrating) the user's database.
+
+    Raises:
+        SchemaVersionError: if the database was created by a newer version of Monelyth.
+        sqlite3.Error: if the database file cannot be opened.
+        OSError: if the data folder cannot be created.
+    """
+    database = Database(settings.data_dir)
+    database.initialize()
+
     app = FastAPI(
         title="Monelyth Engine",
         version=__version__,
@@ -23,7 +35,10 @@ def create_app(settings: Settings) -> FastAPI:
         redoc_url=None,
         openapi_url=None,
     )
-    app.include_router(health.router)
+    app.state.database = database
+    install_error_handlers(app)
+    for module in (health, accounts, categories, imports, transactions):
+        app.include_router(module.router)
 
     # Starlette runs the middleware added last first, so requests pass through, in order:
     # CORS -> trusted host -> token check -> routes. CORS must be outermost so browser

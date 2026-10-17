@@ -7,9 +7,10 @@ Usage (from the ``engine`` folder)::
 Steps:
 
 1. Build ``monelyth-engine`` with PyInstaller in a temporary folder.
-2. Smoke-test the executable: start it, wait for the READY line, call ``/health`` with the
-   token, then ask it to shut down. A binary that is missing a module fails here instead of
-   on a user's machine.
+2. Smoke-test the executable: start it, wait for the READY line, then with the token check
+   ``/health``, create an account, preview and import a CSV, and preview an OFX file, then
+   ask it to shut down. A binary missing a module or data file fails here instead of on a
+   user's machine.
 3. Copy it to ``apps/desktop/src-tauri/binaries/monelyth-engine-<target-triple>[.exe]``,
    the name Tauri requires for ``bundle.externalBin``.
 """
@@ -25,9 +26,10 @@ import subprocess
 import sys
 import tempfile
 import threading
+import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import IO, Final
+from typing import IO, Final, cast
 
 ENGINE_DIR: Final = Path(__file__).resolve().parents[1]
 REPO_DIR: Final = ENGINE_DIR.parent
@@ -36,6 +38,15 @@ ENTRY_SCRIPT: Final = ENGINE_DIR / "scripts" / "sidecar_entry.py"
 NAME: Final = "monelyth-engine"
 EXE_SUFFIX: Final = ".exe" if sys.platform == "win32" else ""
 SMOKE_TIMEOUT_S: Final = 60.0
+
+SAMPLE_OFX: Final = REPO_DIR / "sample-data" / "demo-checking.ofx"
+SMOKE_ACCOUNT: Final = {"name": "Smoke Test", "type": "checking", "currency": "CAD"}
+SMOKE_CSV: Final = (
+    b"Date,Description,Amount\n"
+    b"2026-09-01,PAYROLL ACME CORP,2000.00\n"
+    b"2026-09-02,SQ *BLUE BOTTLE 0423 TORONTO ON,-5.25\n"
+)
+SMOKE_CSV_ROWS: Final = 2
 
 
 def main() -> int:
@@ -83,6 +94,15 @@ def _build(work_dir: Path) -> Path:
             # __version__ is read from the package metadata at runtime.
             "--copy-metadata",
             "monelyth-engine",
+            # ofxtools reads its own version from metadata when it is imported.
+            "--copy-metadata",
+            "ofxtools",
+            # Non-Python files loaded at runtime: the database migrations (*.sql) and the
+            # config files ofxtools ships with.
+            "--collect-data",
+            "monelyth_engine",
+            "--collect-data",
+            "ofxtools",
             # uvicorn imports its protocol and loop implementations by name.
             "--collect-submodules",
             "uvicorn",
@@ -100,6 +120,8 @@ def _build(work_dir: Path) -> Path:
 
 
 def _smoke_test(executable: Path) -> None:
+    """Exercise what a frozen build is most likely to be missing: the HTTP server, the
+    database migrations, multipart uploads and both statement parsers."""
     token = secrets.token_hex(32)
     with tempfile.TemporaryDirectory(prefix="monelyth-smoke-") as data_dir:
         process = subprocess.Popen(
@@ -110,15 +132,35 @@ def _smoke_test(executable: Path) -> None:
             text=True,
         )
         try:
-            port = _wait_for_ready(process)
-            request = urllib.request.Request(
-                f"http://127.0.0.1:{port}/health",
-                headers={"Authorization": f"Bearer {token}"},
+            client = _SmokeClient(_wait_for_ready(process), token)
+            _expect(client.request("GET", "/health"), 200, "status", "ok")
+            account = _expect(client.request("POST", "/accounts", json_body=SMOKE_ACCOUNT), 201)
+            preview = _expect(
+                client.request("POST", "/imports/preview", file=("smoke.csv", SMOKE_CSV)), 200
             )
-            with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310 -- fixed loopback URL
-                body: object = json.loads(response.read())
-            if not isinstance(body, dict) or body.get("status") != "ok":  # pyright: ignore[reportUnknownMemberType]
-                raise RuntimeError(f"unexpected /health response: {body!r}")
+            layout = _field(_field(preview, "csv"), "layout")
+            _expect(
+                client.request(
+                    "POST",
+                    "/imports",
+                    file=("smoke.csv", SMOKE_CSV),
+                    fields={
+                        "account_id": str(_field(account, "id")),
+                        "layout": json.dumps(layout),
+                    },
+                ),
+                201,
+                "added",
+                SMOKE_CSV_ROWS,
+            )
+            _expect(
+                client.request(
+                    "POST", "/imports/preview", file=("smoke.ofx", SAMPLE_OFX.read_bytes())
+                ),
+                200,
+                "format",
+                "ofx",
+            )
 
             if process.stdin is None:
                 raise RuntimeError("sidecar stdin is not a pipe")
@@ -132,6 +174,75 @@ def _smoke_test(executable: Path) -> None:
                 process.kill()
                 process.wait()
     print("Smoke test passed.")
+
+
+class _SmokeClient:
+    """A minimal HTTP client using only the standard library, like the rest of this script."""
+
+    def __init__(self, port: int, token: str) -> None:
+        self._base = f"http://127.0.0.1:{port}"
+        self._token = token
+
+    def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_body: object = None,
+        file: tuple[str, bytes] | None = None,
+        fields: dict[str, str] | None = None,
+    ) -> tuple[int, object]:
+        headers = {"Authorization": f"Bearer {self._token}"}
+        data: bytes | None = None
+        if json_body is not None:
+            data = json.dumps(json_body).encode()
+            headers["Content-Type"] = "application/json"
+        elif file is not None:
+            boundary = secrets.token_hex(16)
+            data = _multipart(boundary, file, fields or {})
+            headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+        request = urllib.request.Request(  # noqa: S310 -- fixed loopback URL
+            self._base + path, data=data, headers=headers, method=method
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
+                return response.status, json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            return error.code, json.loads(error.read() or b"null")
+
+
+def _multipart(boundary: str, file: tuple[str, bytes], fields: dict[str, str]) -> bytes:
+    crlf = b"\r\n"
+    parts: list[bytes] = []
+    for name, value in fields.items():
+        disposition = f'Content-Disposition: form-data; name="{name}"'
+        parts += [f"--{boundary}".encode(), disposition.encode(), b"", value.encode()]
+    file_name, content = file
+    parts += [
+        f"--{boundary}".encode(),
+        f'Content-Disposition: form-data; name="file"; filename="{file_name}"'.encode(),
+        b"Content-Type: application/octet-stream",
+        b"",
+        content,
+        f"--{boundary}--".encode(),
+        b"",
+    ]
+    return crlf.join(parts)
+
+
+def _expect(
+    response: tuple[int, object], status: int, key: str | None = None, value: object = None
+) -> object:
+    code, body = response
+    if code != status or (key is not None and _field(body, key) != value):
+        raise RuntimeError(f"smoke test: expected HTTP {status}, got {code}: {body!r}")
+    return body
+
+
+def _field(body: object, key: str) -> object:
+    if not isinstance(body, dict) or key not in body:
+        raise RuntimeError(f"smoke test: response has no {key!r}: {body!r}")
+    return cast("dict[str, object]", body)[key]
 
 
 def _wait_for_ready(process: subprocess.Popen[str]) -> int:

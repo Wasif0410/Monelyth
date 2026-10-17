@@ -1,0 +1,197 @@
+"""Importing statement files: preview first, then commit.
+
+Both routes take the file as multipart form data. The UI uploads the same file twice (once to
+preview, once to import) rather than the engine keeping uploads between requests, so an
+abandoned preview leaves nothing behind.
+"""
+
+from __future__ import annotations
+
+import datetime
+import json
+from typing import Annotated, cast
+
+from fastapi import APIRouter, Form, UploadFile, status
+from pydantic import BaseModel, ConfigDict, JsonValue
+
+from monelyth_engine.api.deps import Connection
+from monelyth_engine.ingest.csv_statement import CsvLayout, CsvQuestionKind
+from monelyth_engine.ingest.models import StatementFormat
+from monelyth_engine.services.importing import (
+    MAX_UPLOAD_BYTES,
+    ImportOutcome,
+    ImportPreview,
+    ImportRequestError,
+    LayoutSource,
+    StatementFile,
+    commit_import,
+    preview_import,
+)
+
+router = APIRouter(prefix="/imports", tags=["imports"])
+
+MAX_LAYOUT_JSON_LENGTH = 10_000
+"""A saved layout is a few hundred characters; anything far larger is not one."""
+
+
+class PreviewRowOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    posted_date: datetime.date
+    description: str
+    merchant: str
+    amount_cents: int
+
+
+class CsvQuestionOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    kind: CsvQuestionKind
+    message: str
+    options: list[str]
+
+
+class CsvPreviewOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    layout: dict[str, JsonValue]
+    """The layout in the same shape ``POST /imports`` accepts, with ``null`` for the parts
+    the user still has to choose."""
+    layout_source: LayoutSource
+    columns: list[str]
+    questions: list[CsvQuestionOut]
+
+
+class PreviousImportOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: int
+    account_id: int
+    file_name: str
+    imported_at: datetime.datetime
+
+
+class ImportPreviewOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    format: StatementFormat
+    file_name: str
+    rows: list[PreviewRowOut]
+    transaction_count: int | None
+    currency: str | None
+    warnings: list[str]
+    previous_import: PreviousImportOut | None
+    """Set when this exact file was imported before; importing it again will be refused."""
+    csv: CsvPreviewOut | None
+
+    @classmethod
+    def of(cls, preview: ImportPreview) -> ImportPreviewOut:
+        previous = preview.previous_import
+        csv = preview.csv
+        return cls(
+            format=preview.format,
+            file_name=preview.file_name,
+            rows=[
+                PreviewRowOut(
+                    posted_date=row.transaction.posted_date,
+                    description=row.transaction.description,
+                    merchant=row.merchant,
+                    amount_cents=row.transaction.amount_cents,
+                )
+                for row in preview.rows
+            ],
+            transaction_count=preview.transaction_count,
+            currency=preview.currency,
+            warnings=list(preview.warnings),
+            previous_import=None
+            if previous is None
+            else PreviousImportOut(
+                id=previous.id,
+                account_id=previous.account_id,
+                file_name=previous.file_name,
+                imported_at=previous.imported_at,
+            ),
+            csv=None
+            if csv is None
+            else CsvPreviewOut(
+                # to_dict() only produces JSON-compatible values.
+                layout=cast("dict[str, JsonValue]", csv.layout.to_dict()),
+                layout_source=csv.layout_source,
+                columns=list(csv.columns),
+                questions=[
+                    CsvQuestionOut(kind=q.kind, message=q.message, options=list(q.options))
+                    for q in csv.questions
+                ],
+            ),
+        )
+
+
+class ImportResultOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    import_id: int
+    account_id: int
+    file_name: str
+    format: StatementFormat
+    added: int
+    skipped_duplicates: int
+    """Transactions already stored from an earlier, overlapping statement."""
+    warnings: list[str]
+
+    @classmethod
+    def of(cls, outcome: ImportOutcome) -> ImportResultOut:
+        record = outcome.record
+        return cls(
+            import_id=record.id,
+            account_id=record.account_id,
+            file_name=record.file_name,
+            format=record.format,
+            added=outcome.added,
+            skipped_duplicates=outcome.skipped_duplicates,
+            warnings=list(outcome.warnings),
+        )
+
+
+@router.post("/preview")
+def post_import_preview(file: UploadFile, conn: Connection) -> ImportPreviewOut:
+    """Read a statement without saving anything, and say what the user still has to confirm."""
+    return ImportPreviewOut.of(preview_import(conn, _read_upload(file)))
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+def post_import(
+    file: UploadFile,
+    account_id: Annotated[int, Form(ge=1)],
+    conn: Connection,
+    layout: Annotated[
+        str | None,
+        Form(
+            max_length=MAX_LAYOUT_JSON_LENGTH,
+            description="Confirmed column layout as JSON. Required for CSV, refused for OFX.",
+        ),
+    ] = None,
+) -> ImportResultOut:
+    """Store a statement's transactions in an account, skipping ones already stored."""
+    outcome = commit_import(
+        conn,
+        account_id=account_id,
+        file=_read_upload(file),
+        layout=None if layout is None else _parse_layout(layout),
+    )
+    return ImportResultOut.of(outcome)
+
+
+def _read_upload(file: UploadFile) -> StatementFile:
+    # Read one byte past the limit so an oversized file is detected without reading all of it.
+    data = file.file.read(MAX_UPLOAD_BYTES + 1)
+    return StatementFile.from_upload(file.filename, data)
+
+
+def _parse_layout(layout_json: str) -> CsvLayout:
+    try:
+        data: object = json.loads(layout_json)
+    except json.JSONDecodeError:
+        raise ImportRequestError(
+            "The column layout sent with the file is not valid JSON."
+        ) from None
+    return CsvLayout.from_dict(data)
