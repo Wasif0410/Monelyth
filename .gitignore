@@ -1,0 +1,42 @@
+# --- Personal financial data: never commit ---
+private-data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# --- Downloaded models ---
+models/
+*.gguf
+*.onnx
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+engine/build/
+engine/dist/
+
+# --- Node / frontend ---
+node_modules/
+dist/
+coverage/
+*.local
+
+# --- Rust / Tauri ---
+target/
+apps/desktop/src-tauri/gen/schemas/
+# Built engine sidecar (produced by `pnpm sidecar`)
+apps/desktop/src-tauri/binaries/*
+!apps/desktop/src-tauri/binaries/.gitkeep
+
+# --- Editors / OS ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log
