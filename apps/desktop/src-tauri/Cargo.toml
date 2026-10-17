@@ -1,0 +1,43 @@
+[package]
+name = "monelyth"
+version = "0.1.0"
+description = "Private, offline personal finance"
+authors = ["Wasif Saeed"]
+license = "MIT"
+edition = "2024"
+rust-version = "1.90"
+publish = false
+
+[lib]
+# The `_lib` suffix keeps the library name distinct from the binary name, which Cargo
+# requires on Windows: https://github.com/rust-lang/cargo/issues/8519
+name = "monelyth_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6", features = [] }
+
+[dependencies]
+getrandom = "0.3"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.12", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-shell = "2"
+tokio = { version = "1", features = ["time", "macros"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+# Size-focused release profile: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
