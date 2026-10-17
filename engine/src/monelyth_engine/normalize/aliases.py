@@ -87,6 +87,8 @@ UPPERCASE_WORDS: Final = frozenset(
     {
         *("a&w", "amc", "atm", "bmo", "bp", "cibc", "cvs", "dhl", "gnc", "h&m", "hbc", "hsbc"),
         *("ihop", "ikea", "kfc", "lcbo", "rbc", "saq", "td", "tjx", "ttc", "ups", "usps", "ymca"),
+        # Tax agencies and taxes, which appear on refunds and payments.
+        *("cra", "gst", "hst", "irs", "qst"),
     }
 )
 """Words shown in capitals instead of title case: brands and abbreviations people write that way."""

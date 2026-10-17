@@ -8,6 +8,8 @@ from monelyth_engine.normalize import normalize_merchant
 
 # Raw bank description -> the merchant name the app shows. Grouped by the rule each row checks.
 GOLDEN: list[tuple[str, str]] = [
+    ("CRA TAX REFUND", "CRA Tax Refund"),
+    ("GST/HST CREDIT CANADA", "GST/HST Credit Canada"),
     # The PLAN.md example.
     ("SQ *BLUE BOTTLE 0423 TORONTO ON", "Blue Bottle"),
     # Payment-processor prefixes, including nested ones.

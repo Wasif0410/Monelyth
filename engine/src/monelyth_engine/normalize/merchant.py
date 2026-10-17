@@ -309,6 +309,9 @@ def _display_case(text: str) -> str:
 
 
 def _display_word(word: str, *, is_edge: bool) -> str:
+    if "/" in word:
+        # Each side of "GST/HST" or "Food/Drink" is cased on its own.
+        return "/".join(_display_word(part, is_edge=is_edge) for part in word.split("/"))
     if word in UPPERCASE_WORDS:
         return word.upper()
     if word in _MINOR_WORDS and not is_edge:
