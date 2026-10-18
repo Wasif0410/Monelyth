@@ -113,6 +113,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/transactions/range": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Transaction Range
+         * @description The dates of the oldest and newest stored transactions, e.g. to bound a month picker.
+         */
+        get: operations["get_transaction_range_transactions_range_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transactions/{transaction_id}": {
         parameters: {
             query?: never;
@@ -347,6 +367,13 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** TransactionRangeOut */
+        TransactionRangeOut: {
+            /** First Date */
+            first_date: string | null;
+            /** Last Date */
+            last_date: string | null;
+        };
         /**
          * TransactionUpdate
          * @description The user's edits. Leave a field out to keep its current value.
@@ -547,6 +574,10 @@ export interface operations {
                 /** @description Inclusive */
                 date_to?: string | null;
                 category_id?: number | null;
+                /** @description false: only uncategorized transactions; true: only categorized ones */
+                categorized?: boolean | null;
+                /** @description true: only the review queue; false: everything else */
+                needs_review?: boolean | null;
                 /** @description Search text */
                 q?: string | null;
                 limit?: number;
@@ -574,6 +605,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_transaction_range_transactions_range_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionRangeOut"];
                 };
             };
         };
