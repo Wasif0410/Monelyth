@@ -360,6 +360,8 @@ Each step has a checkbox so you can track progress in this file.
 
 **Effort:** ~2–3 weeks
 
+> **Status (2026-10-18):** done, except the classifier tier. Built as four parallel pieces against a shared `Categorizer` contract: the pipeline (merchant memory, 138 default rules, background runs after import, review queue, learning from corrections, re-categorizing after rule edits, eval script, and the Review and Rules screens), transfer detection (precision and recall 1.0 on the sample card payments; unlinked pairs are remembered), a loopback-only local-LLM tier, and the Laya evaluation. **Laya was not shipped (path c):** 52.8% of merchants right at best, and wrong one time in three even at ≥0.8 confidence (`engine/research/laya_eval/RESULTS.md`). 3.5 therefore has nothing to run yet; the embedding nearest-neighbour fallback is the next candidate. Eval with memory and rules on the sample data: 95.9% before corrections, 100% after one round. That number is optimistic, since the sample data is synthetic and the rules were written against it, so a real labeled set is still needed.
+
 **How a transaction gets its category.** Cheap, certain checks run first; expensive, uncertain ones only run when needed:
 
 ```mermaid
@@ -381,18 +383,18 @@ flowchart TD
 
 Most people buy from the same few dozen merchants every month, so after the first month or two, nearly everything is answered by the first box in a fraction of a millisecond.
 
-- [ ] **3.1 Build an evaluation set first**
+- [x] **3.1 Build an evaluation set first**
   - Label 300–500 of your own real transactions by hand. Store them in `private-data/labels.csv`, which is git-ignored.
   - Write `engine/scripts/eval_categorizer.py`, which runs the pipeline on the labeled set and prints: overall accuracy, accuracy per category, a confusion table (which categories get mixed up), and **coverage per tier** (what % each box in the diagram answered).
   - Without this, "is the classifier good?" is a feeling. With it, it's a number you can put on your resume.
-- [ ] **3.2 Tier 1: merchant memory**
+- [x] **3.2 Tier 1: merchant memory**
   - Look up the cleaned merchant name in `merchant_memory`.
   - **Who wins when they disagree:** a category the user set by hand beats everything, then user-made rules, then memory entries the classifier or LLM created. So if the LLM once guessed "Shopping" for a merchant and the user later adds a rule saying "Groceries," the rule wins.
-- [ ] **3.3 Tier 2: rules**
+- [x] **3.3 Tier 2: rules**
   - Ship about 100 default rules (`netflix` → Subscriptions, `uber eats` → Dining Out, `uber` → Rideshare, `payroll` → Salary).
   - Higher priority runs first, which is why `uber eats` is checked before `uber`.
   - Users can add their own: "Always put anything containing X in Y."
-- [ ] **3.4 Tier 3: Laya evaluation (a decision point)**
+- [x] **3.4 Tier 3: Laya evaluation (a decision point)**
   - Read the Laya model card: how to give it input, whether you pass in your own category list when running it (zero-shot) or whether it has fixed labels, its license, and its size.
   - Run it on the evaluation set and record accuracy, speed on a normal laptop CPU, and file size.
   - Then pick one path:
@@ -403,20 +405,20 @@ Most people buy from the same few dozen merchants every month, so after the firs
 - [ ] **3.5 Run the classifier efficiently**
   - Use ONNX Runtime in the app, not PyTorch. PyTorch alone would add 1 GB+ to the install.
   - Classify in batches of 32–64 in a background job right after import, so the UI stays responsive. Show a progress bar.
-- [ ] **3.6 Tier 4: LLM fallback**
+- [x] **3.6 Tier 4: LLM fallback**
   - Build the small `LLMClient` described in step 5.1 now (it's about 30 lines); the chat in Phase 5 reuses it.
   - Send the local LLM the category list plus merchant, amount and date, and **force JSON output** with a schema (`{"category": "...", "confident": true}`). Both llama-server (`response_format` with a JSON schema) and Ollama (`format`) support this, so the model can't reply with chatty text.
   - Save the answer into merchant memory (source `llm`), so each new merchant hits the LLM once, ever.
   - If no LLM is installed, skip this tier and send the transaction to review.
-- [ ] **3.7 Review queue**
+- [x] **3.7 Review queue**
   - Anything below the confidence threshold gets `needs_review = 1`. Show a "Needs review (7)" badge in the sidebar with a fast review screen: one transaction at a time, keyboard shortcuts, "accept all suggestions."
   - Start the threshold at 0.80 and tune it with the eval set (the trade-off: higher means fewer mistakes but more review).
-- [ ] **3.8 Learn from corrections**
+- [x] **3.8 Learn from corrections**
   - When the user changes a category: save it to merchant memory, then ask "Apply to all 14 past transactions from Blue Bottle?"
-- [ ] **3.9 Transfer detection**
+- [x] **3.9 Transfer detection**
   - Paying your credit card shows up twice: money out of checking and money into the card. Counting both as spending would double it.
   - Match pairs with the same amount and opposite signs, in different accounts, within 5 days, ideally with a keyword like `payment` or `transfer`. Link them with a shared `transfer_group` and category Transfers, and leave them out of spending totals.
-- [ ] **3.10 Re-categorize after rule changes**
+- [x] **3.10 Re-categorize after rule changes**
   - When a rule is added or edited, re-run the pipeline on affected transactions, but never overwrite a category the user set by hand.
 
 **Done when:** the eval script runs and reports tier coverage and accuracy. Target: **≥ 90% correct on your eval set** after one round of corrections (a goal; adjust once you see real numbers).
