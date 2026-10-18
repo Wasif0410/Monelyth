@@ -1,0 +1,38 @@
+[project]
+name = "laya-eval"
+version = "0.0.0"
+description = "Research-only: evaluate the Laya classifier on Monelyth's labeled transactions."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "laya[onnx]==0.4.11",
+    "monelyth-engine",
+    "psutil>=7,<8",
+    "torch==2.*",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+monelyth-engine = { path = "../..", editable = true }
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+
+[tool.ruff.lint.isort]
+known-first-party = ["dataset", "metrics", "run_eval"]
+
+[tool.pyright]
+include = ["."]
+exclude = [".venv", "results", "models"]
+extraPaths = ["."]
+typeCheckingMode = "standard"
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
