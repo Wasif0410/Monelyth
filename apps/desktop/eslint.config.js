@@ -6,7 +6,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  globalIgnores(["dist", "coverage", "src-tauri"]),
+  globalIgnores(["dist", "coverage", "src-tauri", "src/api/schema.d.ts"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -23,5 +23,11 @@ export default defineConfig([
         tsconfigRootDir: import.meta.dirname,
       },
     },
+  },
+  {
+    // shadcn/ui primitives export their style variants (buttonVariants, ...) next to the
+    // component; that is the library's convention, and these files are rarely edited.
+    files: ["src/components/ui/**/*.tsx"],
+    rules: { "react-refresh/only-export-components": "off" },
   },
 ]);

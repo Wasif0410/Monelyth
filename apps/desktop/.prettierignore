@@ -5,3 +5,5 @@ pnpm-lock.yaml
 src-tauri/target
 src-tauri/gen
 src-tauri/binaries
+src/api/openapi.json
+src/api/schema.d.ts

@@ -86,6 +86,12 @@ jobs:
           uv sync --locked --project engine
           pnpm --dir apps/desktop install --frozen-lockfile
 
+      # The UI's API types are generated from the engine; fail if someone changed one side only.
+      - name: Check generated API types are current
+        run: |
+          pnpm --dir apps/desktop api:types
+          git diff --exit-code -- apps/desktop/src/api/openapi.json apps/desktop/src/api/schema.d.ts
+
       # tauri-build requires the sidecar to exist before any Rust code compiles.
       - name: Build and smoke-test the engine sidecar
         working-directory: apps/desktop
