@@ -127,6 +127,19 @@
             "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A column layout to read the whole file with, as JSON in the shape POST /imports takes. CSV only. Without it, the engine detects the layout.",
+            "title": "Layout"
           }
         },
         "required": [
@@ -190,6 +203,133 @@
         "title": "CategorySource",
         "type": "string"
       },
+      "CsvLayoutOut": {
+        "additionalProperties": false,
+        "description": "A CSV layout in exactly the shape ``POST /imports`` takes as ``layout``, except that\n``null`` marks a part the user still has to choose. Columns count from 0.",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "debit_credit": "#/components/schemas/DebitCreditOut",
+                    "signed": "#/components/schemas/SignedAmountOut"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/SignedAmountOut"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DebitCreditOut"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "date_column": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Column"
+          },
+          "date_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Format"
+          },
+          "decimal_separator": {
+            "enum": [
+              ".",
+              ","
+            ],
+            "title": "Decimal Separator",
+            "type": "string"
+          },
+          "delimiter": {
+            "enum": [
+              ",",
+              ";",
+              "\t"
+            ],
+            "title": "Delimiter",
+            "type": "string"
+          },
+          "description_column": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description Column"
+          },
+          "encoding": {
+            "enum": [
+              "utf-8-sig",
+              "cp1252"
+            ],
+            "title": "Encoding",
+            "type": "string"
+          },
+          "has_header": {
+            "title": "Has Header",
+            "type": "boolean"
+          },
+          "invert_signs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invert Signs"
+          },
+          "skip_rows": {
+            "title": "Skip Rows",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "encoding",
+          "delimiter",
+          "skip_rows",
+          "has_header",
+          "date_column",
+          "description_column",
+          "amount",
+          "date_format",
+          "decimal_separator",
+          "invert_signs"
+        ],
+        "title": "CsvLayoutOut",
+        "type": "object"
+      },
       "CsvPreviewOut": {
         "properties": {
           "columns": {
@@ -199,12 +339,15 @@
             "title": "Columns",
             "type": "array"
           },
-          "layout": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/JsonValue"
+          "date_formats": {
+            "items": {
+              "$ref": "#/components/schemas/DateFormatOut"
             },
-            "title": "Layout",
-            "type": "object"
+            "title": "Date Formats",
+            "type": "array"
+          },
+          "layout": {
+            "$ref": "#/components/schemas/CsvLayoutOut"
           },
           "layout_source": {
             "$ref": "#/components/schemas/LayoutSource"
@@ -221,7 +364,8 @@
           "layout",
           "layout_source",
           "columns",
-          "questions"
+          "questions",
+          "date_formats"
         ],
         "title": "CsvPreviewOut",
         "type": "object"
@@ -265,6 +409,50 @@
           "options"
         ],
         "title": "CsvQuestionOut",
+        "type": "object"
+      },
+      "DateFormatOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "DateFormatOut",
+        "type": "object"
+      },
+      "DebitCreditOut": {
+        "additionalProperties": false,
+        "description": "Money out and money in sit in separate columns.",
+        "properties": {
+          "credit_column": {
+            "title": "Credit Column",
+            "type": "integer"
+          },
+          "debit_column": {
+            "title": "Debit Column",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "debit_credit",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "debit_column",
+          "credit_column"
+        ],
+        "title": "DebitCreditOut",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -423,11 +611,11 @@
         "title": "ImportResultOut",
         "type": "object"
       },
-      "JsonValue": {},
       "LayoutSource": {
         "enum": [
           "saved",
-          "detected"
+          "detected",
+          "chosen"
         ],
         "title": "LayoutSource",
         "type": "string"
@@ -488,6 +676,27 @@
           "imported_at"
         ],
         "title": "PreviousImportOut",
+        "type": "object"
+      },
+      "SignedAmountOut": {
+        "additionalProperties": false,
+        "description": "One column holds every amount, negative for money out (unless ``invert_signs``).",
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "signed",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "column"
+        ],
+        "title": "SignedAmountOut",
         "type": "object"
       },
       "StatementFormat": {
@@ -864,7 +1073,7 @@
     },
     "/imports/preview": {
       "post": {
-        "description": "Read a statement without saving anything, and say what the user still has to confirm.",
+        "description": "Read a statement without saving anything, and say what the user still has to confirm.\n\nWith ``layout``, every row is read with it, so the rows and count match what importing would\nstore, and a row that doesn't fit is reported as an error naming the row.",
         "operationId": "post_import_preview_imports_preview_post",
         "requestBody": {
           "content": {

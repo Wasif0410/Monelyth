@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from monelyth_engine.config import Settings
 from monelyth_engine.database import Database
+from monelyth_engine.ingest.csv_statement import DATE_FORMATS
 from monelyth_engine.services.importing import MAX_UPLOAD_BYTES
 from tests.api.conftest import SAMPLE_DATA, create_account
 
@@ -17,10 +18,31 @@ CARD_CSV = (SAMPLE_DATA / "demo-credit-card.csv").read_bytes()
 CHECKING_OFX = (SAMPLE_DATA / "demo-checking.ofx").read_bytes()
 CHECKING_ROWS = CHECKING_CSV.count(b"\n") - 1
 CARD_ROWS = CARD_CSV.count(b"\n") - 1
+# Every day is 12 or under, so the date order can't be detected and the user must choose it.
+AMBIGUOUS_DATES_CSV = (
+    b"Date,Description,Amount\n"
+    b"03/04/2026,SQ *BLUE BOTTLE 0423 TORONTO ON,-4.50\n"
+    b"05/06/2026,PAYROLL DEPOSIT ACME CORP,1200.00\n"
+)
 
 
-def _preview(api: TestClient, data: bytes, name: str = "statement.csv") -> dict[str, Any]:
-    response = api.post("/imports/preview", files={"file": (name, data)})
+def _post_preview(
+    api: TestClient,
+    data: bytes,
+    name: str = "statement.csv",
+    layout: dict[str, Any] | None = None,
+) -> Any:
+    form = None if layout is None else {"layout": json.dumps(layout)}
+    return api.post("/imports/preview", files={"file": (name, data)}, data=form)
+
+
+def _preview(
+    api: TestClient,
+    data: bytes,
+    name: str = "statement.csv",
+    layout: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    response = _post_preview(api, data, name, layout)
     assert response.status_code == 200, response.text
     body: dict[str, Any] = response.json()
     return body
@@ -68,6 +90,107 @@ def test_csv_preview_detects_layout_and_cleans_merchants(api: TestClient) -> Non
     }
     assert "PREAUTHORIZED" not in first["merchant"]
     assert len(preview["rows"]) == 10
+
+
+def test_preview_lists_date_formats_with_labels(api: TestClient) -> None:
+    formats = _preview(api, CHECKING_CSV)["csv"]["date_formats"]
+
+    assert [f["code"] for f in formats] == list(DATE_FORMATS)
+    assert {"code": "%d/%m/%Y", "label": "DD/MM/YYYY"} in formats
+    assert {"code": "%b %d, %Y", "label": "Mon DD, YYYY"} in formats
+
+
+def test_preview_asks_for_an_ambiguous_date_order(api: TestClient) -> None:
+    preview = _preview(api, AMBIGUOUS_DATES_CSV)
+
+    csv = preview["csv"]
+    assert csv["layout"]["date_format"] is None
+    assert [q["kind"] for q in csv["questions"]] == ["date_order_ambiguous"]
+    assert csv["questions"][0]["options"] == ["%m/%d/%Y", "%d/%m/%Y"]
+    assert preview["transaction_count"] is None
+
+
+@pytest.mark.parametrize(
+    ("date_format", "first_date"), [("%d/%m/%Y", "2026-04-03"), ("%m/%d/%Y", "2026-03-04")]
+)
+def test_preview_with_a_layout_reads_rows_with_it(
+    api: TestClient, date_format: str, first_date: str
+) -> None:
+    layout = _preview(api, AMBIGUOUS_DATES_CSV)["csv"]["layout"]
+    layout["date_format"] = date_format
+
+    preview = _preview(api, AMBIGUOUS_DATES_CSV, layout=layout)
+
+    assert preview["transaction_count"] == 2
+    assert preview["rows"][0]["posted_date"] == first_date
+    assert preview["csv"]["layout"] == layout
+    assert preview["csv"]["layout_source"] == "chosen"
+    assert preview["csv"]["questions"] == []
+    assert preview["csv"]["columns"] == ["Date", "Description", "Amount"]
+
+
+def test_preview_with_a_layout_applies_the_sign_convention(api: TestClient) -> None:
+    detected = _preview(api, CHECKING_CSV)
+
+    inverted = _preview(
+        api, CHECKING_CSV, layout={**detected["csv"]["layout"], "invert_signs": True}
+    )
+
+    assert [row["amount_cents"] for row in inverted["rows"]] == [
+        -row["amount_cents"] for row in detected["rows"]
+    ]
+
+
+def test_preview_with_a_layout_counts_the_whole_file(api: TestClient) -> None:
+    layout = _preview(api, CHECKING_CSV)["csv"]["layout"]
+
+    preview = _preview(api, CHECKING_CSV, layout=layout)
+
+    assert preview["transaction_count"] == CHECKING_ROWS
+    assert len(preview["rows"]) == 10
+
+
+def test_preview_with_a_layout_that_does_not_fit_names_the_row(api: TestClient) -> None:
+    layout = _preview(api, CHECKING_CSV)["csv"]["layout"]
+    layout["date_format"] = "%d/%m/%Y"  # the file uses ISO dates
+
+    response = _post_preview(api, CHECKING_CSV, layout=layout)
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        'Row 2: the date "2025-10-01" doesn\'t match the format DD/MM/YYYY.'
+    )
+
+
+@pytest.mark.parametrize("layout_text", ["not json", '{"version": 1}', "[]", '{"version": 2}'])
+def test_preview_rejects_a_malformed_layout(api: TestClient, layout_text: str) -> None:
+    response = api.post(
+        "/imports/preview",
+        files={"file": ("s.csv", CHECKING_CSV)},
+        data={"layout": layout_text},
+    )
+
+    assert response.status_code == 422
+    assert isinstance(response.json()["detail"], str)
+
+
+def test_preview_refuses_a_layout_for_ofx(api: TestClient) -> None:
+    layout = _preview(api, CHECKING_CSV)["csv"]["layout"]
+
+    response = _post_preview(api, CHECKING_OFX, "demo-checking.ofx", layout)
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "A column layout only applies to CSV files."
+
+
+def test_preview_with_a_layout_still_reports_a_previous_import(api: TestClient) -> None:
+    account = create_account(api)
+    result = _import_csv(api, account["id"], CHECKING_CSV, "demo-checking.csv")
+    layout = _preview(api, CHECKING_CSV)["csv"]["layout"]
+
+    preview = _preview(api, CHECKING_CSV, layout=layout)
+
+    assert preview["previous_import"]["id"] == result["import_id"]
 
 
 def test_preview_saves_nothing(api: TestClient) -> None:
