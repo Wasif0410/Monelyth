@@ -32,12 +32,17 @@ Every route needs `Authorization: Bearer <token>`. Errors the user should see co
 | Route | Purpose |
 |---|---|
 | `GET /health` | Liveness and version |
-| `GET /accounts`, `POST /accounts` | List and add accounts |
+| `GET /accounts`, `POST /accounts` | List and add accounts. Each comes with its transaction count, latest transaction date and `net_amount_cents` (the sum of its imported transactions, not a bank balance) |
+| `PATCH /accounts/{id}` | Rename an account or change its institution |
+| `DELETE /accounts/{id}` | Delete an account with all of its imports and transactions, in one step |
 | `GET /categories` | Default and user categories |
 | `POST /imports/preview` | Upload a statement (multipart `file`); returns the detected format, CSV layout and open questions, and the first rows. Saves nothing |
 | `POST /imports` | Upload it again with `account_id` (and the confirmed CSV `layout` as JSON) to store it. `409` if the exact file was imported before; overlapping rows are skipped |
 | `GET /transactions` | Filter by `account_id`, `date_from`, `date_to`, `category_id`, `q`; paged with `limit`/`offset` |
 | `PATCH /transactions/{id}` | Set the category and/or merchant name (marked as the user's choice) |
+| `GET /system/info` | Engine version, data folder, database size, and how many accounts and transactions there are |
+| `POST /data/export` | `{"folder": "<full path>"}`: writes a new `Monelyth export <date> <time>` folder there with a copy of the database (SQLite backup API), `transactions.csv` and a README; returns its `path` |
+| `POST /data/erase` | `{"confirm": "DELETE"}`: deletes all user data in one step and leaves a freshly seeded database |
 
 Sample statements to try it with are in [`../sample-data/`](../sample-data/).
 
