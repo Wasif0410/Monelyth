@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from monelyth_engine import __version__
-from monelyth_engine.api import accounts, categories, health, imports, transactions
+from monelyth_engine.api import accounts, categories, data, health, imports, transactions
 from monelyth_engine.api.errors import install_error_handlers
 from monelyth_engine.config import HOST, Settings
 from monelyth_engine.database import Database
@@ -37,7 +37,7 @@ def create_app(settings: Settings) -> FastAPI:
     )
     app.state.database = database
     install_error_handlers(app)
-    for module in (health, accounts, categories, imports, transactions):
+    for module in (health, accounts, categories, imports, transactions, data):
         app.include_router(module.router)
 
     # Starlette runs the middleware added last first, so requests pass through, in order:
