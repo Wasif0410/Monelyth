@@ -20,6 +20,7 @@ from monelyth_engine.db.maintenance import (
     exported_transactions,
 )
 from monelyth_engine.db.models import Account, AccountType
+from monelyth_engine.db.rules import RuleAuthor, list_rules
 from monelyth_engine.db.transactions import update_transaction
 from tests.db.conftest import ImportStatement, count_rows, raw
 
@@ -28,10 +29,11 @@ USER_TABLES = (
     "imports",
     "transactions",
     "merchant_memory",
-    "rules",
     "csv_profiles",
     "chat_messages",
 )
+SEEDED_TABLES = ("categories", "rules")
+"""Tables a new database starts with rows in: the default categories and rules."""
 
 
 @pytest.fixture
@@ -81,7 +83,7 @@ def test_backup_is_a_complete_self_contained_copy(
     with closing(sqlite3.connect(target)) as copy:
         # A rollback-journal file, so it is complete on its own without a -wal file.
         assert copy.execute("PRAGMA journal_mode").fetchone()[0] == "delete"
-        for table in (*USER_TABLES, "categories"):
+        for table in (*USER_TABLES, *SEEDED_TABLES):
             assert count_rows(copy, table) == count_rows(db, table)
 
 
@@ -131,6 +133,7 @@ def test_erase_empties_every_table_and_restores_the_seed(
 ) -> None:
     with closing(connect(tmp_path / "fresh.db")) as fresh:
         fresh_categories = list_categories(fresh)
+        fresh_rules = list_rules(fresh)
 
     deleted = erase_all_data(db)
 
@@ -138,6 +141,9 @@ def test_erase_empties_every_table_and_restores_the_seed(
     for table in USER_TABLES:
         assert count_rows(db, table) == 0, table
     assert list_categories(db) == fresh_categories
+    # The user's rule is gone; the defaults are back.
+    assert list_rules(db) == fresh_rules
+    assert all(rule.created_by is RuleAuthor.SYSTEM for rule in fresh_rules)
     assert db.execute("PRAGMA foreign_key_check").fetchall() == []
     # The database stays usable, and new rows start from ID 1 as in a new database.
     account = create_account(db, name="New", account_type=AccountType.CHECKING, currency="CAD")
@@ -154,7 +160,7 @@ def test_erase_on_an_empty_database_changes_nothing(db: sqlite3.Connection) -> N
 def test_erase_is_all_or_nothing(
     db: sqlite3.Connection, filled: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    before = {table: count_rows(db, table) for table in (*USER_TABLES, "categories")}
+    before = {table: count_rows(db, table) for table in (*USER_TABLES, *SEEDED_TABLES)}
     # A seed row that breaks a constraint makes the erase fail after every table was emptied.
     monkeypatch.setattr(
         maintenance,

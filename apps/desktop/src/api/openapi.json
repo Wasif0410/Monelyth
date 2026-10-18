@@ -1,6 +1,107 @@
 {
   "components": {
     "schemas": {
+      "AcceptAllRequest": {
+        "additionalProperties": false,
+        "description": "Which part of the queue to accept, as for ``GET /transactions``. Every field left out\nmatches everything, so ``{}`` accepts every suggestion waiting for review.",
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q"
+          }
+        },
+        "title": "AcceptAllRequest",
+        "type": "object"
+      },
+      "AcceptRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "transaction_ids": {
+            "items": {
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Transaction Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "transaction_ids"
+        ],
+        "title": "AcceptRequest",
+        "type": "object"
+      },
+      "AcceptedOut": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted"
+        ],
+        "title": "AcceptedOut",
+        "type": "object"
+      },
       "AccountCreate": {
         "additionalProperties": false,
         "properties": {
@@ -162,6 +263,19 @@
         "title": "AccountUpdate",
         "type": "object"
       },
+      "AppliedOut": {
+        "properties": {
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated"
+        ],
+        "title": "AppliedOut",
+        "type": "object"
+      },
       "Body_post_import_imports_post": {
         "properties": {
           "account_id": {
@@ -220,6 +334,61 @@
           "file"
         ],
         "title": "Body_post_import_preview_imports_preview_post",
+        "type": "object"
+      },
+      "CategorizationRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "default": "uncategorized",
+            "enum": [
+              "uncategorized",
+              "all"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "title": "CategorizationRunRequest",
+        "type": "object"
+      },
+      "CategorizationStatusOut": {
+        "properties": {
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "processed": {
+            "title": "Processed",
+            "type": "integer"
+          },
+          "runs_finished": {
+            "title": "Runs Finished",
+            "type": "integer"
+          },
+          "state": {
+            "$ref": "#/components/schemas/WorkerState"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "processed",
+          "total",
+          "last_error",
+          "runs_finished"
+        ],
+        "title": "CategorizationStatusOut",
         "type": "object"
       },
       "CategoryKind": {
@@ -863,6 +1032,233 @@
         "title": "PreviousImportOut",
         "type": "object"
       },
+      "ReviewSummaryOut": {
+        "properties": {
+          "waiting": {
+            "title": "Waiting",
+            "type": "integer"
+          },
+          "with_suggestion": {
+            "title": "With Suggestion",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "waiting",
+          "with_suggestion"
+        ],
+        "title": "ReviewSummaryOut",
+        "type": "object"
+      },
+      "RuleAuthor": {
+        "enum": [
+          "system",
+          "user"
+        ],
+        "title": "RuleAuthor",
+        "type": "string"
+      },
+      "RuleCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "category_id": {
+            "minimum": 1.0,
+            "title": "Category Id",
+            "type": "integer"
+          },
+          "match_type": {
+            "$ref": "#/components/schemas/RuleMatchType",
+            "default": "contains"
+          },
+          "pattern": {
+            "maxLength": 1000,
+            "title": "Pattern",
+            "type": "string"
+          },
+          "priority": {
+            "default": 0,
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Priority",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pattern",
+          "category_id"
+        ],
+        "title": "RuleCreate",
+        "type": "object"
+      },
+      "RuleMatchType": {
+        "enum": [
+          "contains",
+          "regex"
+        ],
+        "title": "RuleMatchType",
+        "type": "string"
+      },
+      "RuleOut": {
+        "properties": {
+          "category_id": {
+            "title": "Category Id",
+            "type": "integer"
+          },
+          "created_by": {
+            "$ref": "#/components/schemas/RuleAuthor"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "match_type": {
+            "$ref": "#/components/schemas/RuleMatchType"
+          },
+          "pattern": {
+            "title": "Pattern",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "pattern",
+          "match_type",
+          "category_id",
+          "priority",
+          "created_by"
+        ],
+        "title": "RuleOut",
+        "type": "object"
+      },
+      "RulePreviewOut": {
+        "properties": {
+          "examples": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Examples",
+            "type": "array"
+          },
+          "matching": {
+            "title": "Matching",
+            "type": "integer"
+          },
+          "user_set": {
+            "title": "User Set",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "matching",
+          "user_set",
+          "examples"
+        ],
+        "title": "RulePreviewOut",
+        "type": "object"
+      },
+      "RulePreviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "match_type": {
+            "$ref": "#/components/schemas/RuleMatchType",
+            "default": "contains"
+          },
+          "pattern": {
+            "maxLength": 1000,
+            "title": "Pattern",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "title": "RulePreviewRequest",
+        "type": "object"
+      },
+      "RuleUpdate": {
+        "additionalProperties": false,
+        "description": "Leave a field out to keep its current value.",
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "match_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleMatchType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          }
+        },
+        "title": "RuleUpdate",
+        "type": "object"
+      },
+      "SameMerchantOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "merchant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merchant"
+          }
+        },
+        "required": [
+          "merchant",
+          "count"
+        ],
+        "title": "SameMerchantOut",
+        "type": "object"
+      },
       "SignedAmountOut": {
         "additionalProperties": false,
         "description": "One column holds every amount, negative for money out (unless ``invert_signs``).",
@@ -1167,6 +1563,15 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "WorkerState": {
+        "enum": [
+          "idle",
+          "queued",
+          "running"
+        ],
+        "title": "WorkerState",
+        "type": "string"
       }
     }
   },
@@ -1355,6 +1760,69 @@
         "summary": "Get Categories",
         "tags": [
           "categories"
+        ]
+      }
+    },
+    "/categorization/run": {
+      "post": {
+        "description": "Categorize in the background; poll ``GET /categorization/status`` for progress.\n\nA request made while a run is going is combined with any other waiting request into one\nnext run.",
+        "operationId": "post_categorization_run_categorization_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategorizationRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategorizationStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Categorization Run",
+        "tags": [
+          "categorization"
+        ]
+      }
+    },
+    "/categorization/status": {
+      "get": {
+        "operationId": "get_categorization_status_categorization_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategorizationStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Categorization Status",
+        "tags": [
+          "categorization"
         ]
       }
     },
@@ -1592,6 +2060,306 @@
         ]
       }
     },
+    "/review/accept": {
+      "post": {
+        "description": "Accept the suggested category of each listed transaction: it becomes your choice, leaves\nthe queue and is remembered for its merchant. Transactions that aren't waiting for review\nwith a suggestion are skipped and not counted.",
+        "operationId": "post_accept_review_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Accept",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/review/accept-all": {
+      "post": {
+        "description": "Accept every suggestion in the review queue that matches the filters.",
+        "operationId": "post_accept_all_review_accept_all_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptAllRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Accept All",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/review/summary": {
+      "get": {
+        "operationId": "get_review_summary_review_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Review Summary",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/rules": {
+      "get": {
+        "description": "Every rule in the order they are tried: yours first, then the defaults, each by priority\n(highest first) and then the longest pattern first.",
+        "operationId": "get_rules_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuleOut"
+                  },
+                  "title": "Response Get Rules Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Rules",
+        "tags": [
+          "rules"
+        ]
+      },
+      "post": {
+        "description": "Add a rule. ``422`` if the pattern can't be used, ``409`` if you already have a rule with\nthe same pattern.",
+        "operationId": "post_rule_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Rule",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
+    "/rules/preview": {
+      "post": {
+        "description": "How many stored transactions a pattern matches, without saving anything. ``422`` with a\nreadable message if the pattern can't be used.",
+        "operationId": "post_rule_preview_rules_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RulePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulePreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Rule Preview",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
+    "/rules/{rule_id}": {
+      "delete": {
+        "description": "Delete one of your rules. ``403`` for a default rule.",
+        "operationId": "delete_rule_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Rule",
+        "tags": [
+          "rules"
+        ]
+      },
+      "patch": {
+        "description": "Change one of your rules. ``403`` for a default rule.",
+        "operationId": "patch_rule_rules__rule_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Rule",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
     "/system/info": {
       "get": {
         "operationId": "get_system_info_system_info_get",
@@ -1820,6 +2588,7 @@
     },
     "/transactions/{transaction_id}": {
       "patch": {
+        "description": "Edit a transaction. A category set here is yours: automatic categorization never changes\nit, and it is remembered for the merchant, so later transactions from it get it too.",
         "operationId": "patch_transaction_transactions__transaction_id__patch",
         "parameters": [
           {
@@ -1865,6 +2634,95 @@
           }
         },
         "summary": "Patch Transaction",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/transactions/{transaction_id}/same-merchant": {
+      "get": {
+        "description": "How many other transactions from this one's merchant would change if its category were\napplied to them, e.g. to ask \"Apply to all 14 from Blue Bottle?\" after a correction.",
+        "operationId": "get_same_merchant_transactions__transaction_id__same_merchant_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "title": "Transaction Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SameMerchantOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Same Merchant",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/transactions/{transaction_id}/same-merchant/apply": {
+      "post": {
+        "description": "Give this transaction's category to the others from its merchant counted by\n``GET .../same-merchant``. Categories you set yourself are never changed.",
+        "operationId": "post_apply_to_same_merchant_transactions__transaction_id__same_merchant_apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "title": "Transaction Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppliedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "The transaction has no category"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Apply To Same Merchant",
         "tags": [
           "transactions"
         ]

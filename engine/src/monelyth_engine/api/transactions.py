@@ -1,14 +1,21 @@
-"""Listing and editing transactions."""
+"""Listing and editing transactions, and learning from the categories the user sets."""
 
 from __future__ import annotations
 
 import datetime
 from typing import Annotated, Final, Self
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from monelyth_engine.api.deps import Connection
+from monelyth_engine.categorize.corrections import (
+    NothingToApplyError,
+    apply_to_same_merchant,
+    remember_choice,
+    same_merchant,
+)
+from monelyth_engine.db.atomic import atomic
 from monelyth_engine.db.models import CategorySource, Transaction, TransactionFilter
 from monelyth_engine.db.transactions import (
     list_transactions,
@@ -90,6 +97,22 @@ class TransactionUpdate(BaseModel):
         return self
 
 
+class SameMerchantOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    merchant: str | None
+    """The transaction's merchant name, as shown."""
+    count: int
+    """Other transactions from this merchant whose category differs (or is missing) and that
+    you haven't categorized yourself."""
+
+
+class AppliedOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    updated: int
+
+
 @router.get("")
 def get_transactions(
     conn: Connection,
@@ -138,7 +161,34 @@ def get_transaction_range(conn: Connection) -> TransactionRangeOut:
 def patch_transaction(
     transaction_id: int, body: TransactionUpdate, conn: Connection
 ) -> TransactionOut:
-    tx = update_transaction(
-        conn, transaction_id, category_id=body.category_id, merchant=body.merchant
-    )
+    """Edit a transaction. A category set here is yours: automatic categorization never changes
+    it, and it is remembered for the merchant, so later transactions from it get it too."""
+    with atomic(conn):
+        tx = update_transaction(
+            conn, transaction_id, category_id=body.category_id, merchant=body.merchant
+        )
+        if body.category_id is not None:
+            remember_choice(conn, tx)
     return TransactionOut.of(tx)
+
+
+@router.get("/{transaction_id}/same-merchant")
+def get_same_merchant(transaction_id: int, conn: Connection) -> SameMerchantOut:
+    """How many other transactions from this one's merchant would change if its category were
+    applied to them, e.g. to ask "Apply to all 14 from Blue Bottle?" after a correction."""
+    found = same_merchant(conn, transaction_id)
+    return SameMerchantOut(merchant=found.merchant, count=len(found.transaction_ids))
+
+
+@router.post(
+    "/{transaction_id}/same-merchant/apply",
+    responses={status.HTTP_409_CONFLICT: {"description": "The transaction has no category"}},
+)
+def post_apply_to_same_merchant(transaction_id: int, conn: Connection) -> AppliedOut:
+    """Give this transaction's category to the others from its merchant counted by
+    ``GET .../same-merchant``. Categories you set yourself are never changed."""
+    try:
+        updated = apply_to_same_merchant(conn, transaction_id)
+    except NothingToApplyError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from None
+    return AppliedOut(updated=updated)

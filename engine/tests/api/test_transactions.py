@@ -6,7 +6,14 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.conftest import create_account
+from tests.api.conftest import (
+    all_transactions,
+    category_ids,
+    create_account,
+    import_csv,
+    settle,
+    transactions_by_description,
+)
 
 STATEMENT = (
     b"Date,Description,Amount\n"
@@ -66,7 +73,7 @@ def test_filters_by_category_state_and_review_flag(api: TestClient, seeded: dict
     assert [t["id"] for t in _list(api, categorized="true")["items"]] == [tx["id"]]
     assert _list(api, categorized="false")["total"] == 2
     assert _list(api, categorized="false", category_id=groceries["id"])["total"] == 0
-    # Nothing is flagged for review until automatic categorization exists.
+    # Background categorization doesn't run in these tests, so nothing is flagged.
     assert _list(api, needs_review="true")["total"] == 0
     assert _list(api, needs_review="false")["total"] == 3
 
@@ -136,3 +143,74 @@ def test_unknown_transaction_or_category_is_404(api: TestClient, seeded: dict[st
 
     assert api.patch("/transactions/999999", json={"merchant": "X"}).status_code == 404
     assert api.patch(f"/transactions/{tx['id']}", json={"category_id": 999}).status_code == 404
+
+
+BLUE_BOTTLES = (
+    b"Date,Description,Amount\n"
+    b"2026-09-01,SQ *BLUE BOTTLE 0423 TORONTO ON,-5.25\n"
+    b"2026-09-02,BLUE BOTTLE COFFEE ONLINE,-24.00\n"
+    b"2026-09-03,SQ *BLUE BOTTLE 0423 TORONTO ON,-4.75\n"
+    b"2026-09-04,SQ *BLUE BOTTLE 0423 TORONTO ON,-6.10\n"
+)
+
+
+def test_a_correction_is_learned_for_later_imports(running_api: TestClient) -> None:
+    api = running_api
+    account = create_account(api)
+    import_csv(api, account["id"], STATEMENT)
+    settle(api)
+    ids = category_ids(api)
+    blue_bottle = transactions_by_description(api)["SQ *BLUE BOTTLE 0423 TORONTO ON"]
+    assert blue_bottle["category_id"] == ids["Coffee"]
+
+    response = api.patch(
+        f"/transactions/{blue_bottle['id']}", json={"category_id": ids["Dining Out"]}
+    )
+    assert response.status_code == 200, response.text
+    later = b"Date,Description,Amount\n2026-10-01,BLUE BOTTLE #12 MONTREAL QC,-6.00\n"
+    import_csv(api, account["id"], later)
+    settle(api)
+
+    newest = all_transactions(api)[0]
+    # The user's correction now beats the default "blue bottle" rule.
+    assert (newest["category_id"], newest["category_source"]) == (ids["Dining Out"], "memory")
+
+
+def test_same_merchant_and_apply(api: TestClient) -> None:
+    import_csv(api, create_account(api)["id"], BLUE_BOTTLES)
+    ids = category_ids(api)
+    rows = sorted(all_transactions(api), key=lambda tx: tx["posted_date"])
+    first, online, third, fourth = rows
+    api.patch(f"/transactions/{fourth['id']}", json={"category_id": ids["Groceries"]})
+    api.patch(f"/transactions/{first['id']}", json={"category_id": ids["Coffee"]})
+
+    same = api.get(f"/transactions/{first['id']}/same-merchant")
+    assert same.status_code == 200, same.text
+    # The online store is a different merchant; the fourth is the user's own choice.
+    assert same.json() == {"merchant": "Blue Bottle", "count": 1}
+
+    applied = api.post(f"/transactions/{first['id']}/same-merchant/apply")
+    assert applied.status_code == 200, applied.text
+    assert applied.json() == {"updated": 1}
+    after = {tx["id"]: tx for tx in all_transactions(api)}
+    assert (after[third["id"]]["category_id"], after[third["id"]]["category_source"]) == (
+        ids["Coffee"],
+        "memory",
+    )
+    assert after[fourth["id"]]["category_id"] == ids["Groceries"]
+    assert after[online["id"]]["category_id"] is None
+    assert api.get(f"/transactions/{first['id']}/same-merchant").json()["count"] == 0
+
+
+def test_apply_needs_a_category_and_a_transaction(api: TestClient) -> None:
+    import_csv(api, create_account(api)["id"], BLUE_BOTTLES)
+    tx = all_transactions(api)[0]
+
+    refused = api.post(f"/transactions/{tx['id']}/same-merchant/apply")
+
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == (
+        "This transaction has no category yet, so there's nothing to apply."
+    )
+    assert api.get("/transactions/99999/same-merchant").status_code == 404
+    assert api.post("/transactions/99999/same-merchant/apply").status_code == 404
