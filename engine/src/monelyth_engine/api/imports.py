@@ -9,13 +9,21 @@ from __future__ import annotations
 
 import datetime
 import json
-from typing import Annotated, cast
+from typing import Annotated, Final, Literal
 
 from fastapi import APIRouter, Form, UploadFile, status
-from pydantic import BaseModel, ConfigDict, JsonValue
+from pydantic import BaseModel, ConfigDict, Field
 
 from monelyth_engine.api.deps import Connection
-from monelyth_engine.ingest.csv_statement import CsvLayout, CsvQuestionKind
+from monelyth_engine.ingest.csv_statement import (
+    DATE_FORMATS,
+    CsvLayout,
+    CsvQuestionKind,
+    DecimalSeparator,
+    Delimiter,
+    Encoding,
+    date_format_label,
+)
 from monelyth_engine.ingest.models import StatementFormat
 from monelyth_engine.services.importing import (
     MAX_UPLOAD_BYTES,
@@ -51,15 +59,71 @@ class CsvQuestionOut(BaseModel):
     options: list[str]
 
 
+class SignedAmountOut(BaseModel):
+    """One column holds every amount, negative for money out (unless ``invert_signs``)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["signed"]
+    column: int
+
+
+class DebitCreditOut(BaseModel):
+    """Money out and money in sit in separate columns."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["debit_credit"]
+    debit_column: int
+    credit_column: int
+
+
+class CsvLayoutOut(BaseModel):
+    """A CSV layout in exactly the shape ``POST /imports`` takes as ``layout``, except that
+    ``null`` marks a part the user still has to choose. Columns count from 0."""
+
+    # extra="forbid": if the saved layout gains a field, this model must gain it too.
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    version: int
+    encoding: Encoding
+    delimiter: Delimiter
+    skip_rows: int
+    has_header: bool
+    date_column: int | None
+    description_column: int | None
+    amount: Annotated[SignedAmountOut | DebitCreditOut, Field(discriminator="kind")] | None
+    date_format: str | None
+    """One of the codes in ``CsvPreviewOut.date_formats``."""
+    decimal_separator: DecimalSeparator
+    invert_signs: bool | None
+    """``true`` when the statement shows purchases as positive numbers."""
+
+
+class DateFormatOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    code: str
+    """The value for ``layout.date_format``."""
+    label: str
+    """How the format is shown to people, e.g. ``DD/MM/YYYY``."""
+
+
+_DATE_FORMATS: Final = tuple(
+    DateFormatOut(code=code, label=date_format_label(code)) for code in DATE_FORMATS
+)
+
+
 class CsvPreviewOut(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    layout: dict[str, JsonValue]
-    """The layout in the same shape ``POST /imports`` accepts, with ``null`` for the parts
-    the user still has to choose."""
+    layout: CsvLayoutOut
     layout_source: LayoutSource
     columns: list[str]
+    """Column names from the header row, or generated ones ("Column 1") without a header."""
     questions: list[CsvQuestionOut]
+    date_formats: list[DateFormatOut]
+    """Every date format a layout may use, in the order detection prefers them."""
 
 
 class PreviousImportOut(BaseModel):
@@ -114,14 +178,15 @@ class ImportPreviewOut(BaseModel):
             csv=None
             if csv is None
             else CsvPreviewOut(
-                # to_dict() only produces JSON-compatible values.
-                layout=cast("dict[str, JsonValue]", csv.layout.to_dict()),
+                # Built from to_dict(), the form POST /imports reads back, so the two can't drift.
+                layout=CsvLayoutOut.model_validate(csv.layout.to_dict()),
                 layout_source=csv.layout_source,
                 columns=list(csv.columns),
                 questions=[
                     CsvQuestionOut(kind=q.kind, message=q.message, options=list(q.options))
                     for q in csv.questions
                 ],
+                date_formats=list(_DATE_FORMATS),
             ),
         )
 
@@ -153,9 +218,27 @@ class ImportResultOut(BaseModel):
 
 
 @router.post("/preview")
-def post_import_preview(file: UploadFile, conn: Connection) -> ImportPreviewOut:
-    """Read a statement without saving anything, and say what the user still has to confirm."""
-    return ImportPreviewOut.of(preview_import(conn, _read_upload(file)))
+def post_import_preview(
+    file: UploadFile,
+    conn: Connection,
+    layout: Annotated[
+        str | None,
+        Form(
+            max_length=MAX_LAYOUT_JSON_LENGTH,
+            description="A column layout to read the whole file with, as JSON in the shape "
+            "POST /imports takes. CSV only. Without it, the engine detects the layout.",
+        ),
+    ] = None,
+) -> ImportPreviewOut:
+    """Read a statement without saving anything, and say what the user still has to confirm.
+
+    With ``layout``, every row is read with it, so the rows and count match what importing would
+    store, and a row that doesn't fit is reported as an error naming the row.
+    """
+    preview = preview_import(
+        conn, _read_upload(file), layout=None if layout is None else _parse_layout(layout)
+    )
+    return ImportPreviewOut.of(preview)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

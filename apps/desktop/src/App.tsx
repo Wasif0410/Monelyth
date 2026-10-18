@@ -1,36 +1,32 @@
-import { ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { RouterProvider } from "react-router";
+import { Toaster } from "sonner";
 
-import { EngineStatusCard } from "@/components/EngineStatusCard";
+import { ApiProvider } from "@/api/ApiProvider";
+import { StartupScreen } from "@/components/StartupScreen";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEngineHealth } from "@/engine/useEngineHealth";
 import { useEngineStatus } from "@/engine/useEngineStatus";
+import { createAppRouter } from "@/routes";
 
 export function App() {
   const status = useEngineStatus();
   const health = useEngineHealth(status);
+  const [router] = useState(createAppRouter);
 
+  if (status.state !== "ready" || health.kind !== "ok") {
+    return <StartupScreen status={status} health={health} />;
+  }
+
+  const connection = { port: status.port, token: status.token };
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-6 py-12">
-      <div className="flex w-full max-w-sm flex-col items-center gap-8 text-center">
-        <div className="flex flex-col items-center gap-4">
-          <div
-            aria-hidden="true"
-            className="bg-primary text-primary-foreground flex size-14 items-center justify-center rounded-2xl text-2xl font-semibold shadow-sm"
-          >
-            M
-          </div>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Monelyth</h1>
-            <p className="text-muted-foreground mt-2">Your money, understood. Privately.</p>
-          </div>
-        </div>
-
-        <EngineStatusCard status={status} health={health} />
-
-        <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-          <ShieldCheck aria-hidden="true" className="size-3.5" />
-          Your data never leaves this computer.
-        </p>
-      </div>
-    </main>
+    // Keyed by the connection: if the engine ever restarts on a new port, every query
+    // starts fresh against the new engine.
+    <ApiProvider key={`${String(connection.port)}:${connection.token}`} connection={connection}>
+      <TooltipProvider delayDuration={300}>
+        <RouterProvider router={router} />
+        <Toaster position="bottom-right" theme="system" richColors closeButton />
+      </TooltipProvider>
+    </ApiProvider>
   );
 }

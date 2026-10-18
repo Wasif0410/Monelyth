@@ -322,30 +322,32 @@ Each step has a checkbox so you can track progress in this file.
 
 **Effort:** ~2 weeks
 
-- [ ] **2.1 Design before code**
+> **Status (2026-10-17):** done. A shared foundation came first (app shell, hash router, typed API client generated from the engine's OpenAPI schema with a CI drift check, shadcn/ui kit, tokens), then four screens were built in parallel: Import, Transactions, Accounts + Settings, and Onboarding with one-click demo data. Design decisions: Inter, a calm green-tinted palette with light and dark modes, sidebar navigation, and transaction filters kept in the URL so any number can link to its transactions. The done-when check was run in the installed app.
+
+- [x] **2.1 Design before code**
   - Choose a look: one font (e.g. Inter or Geist), a calm palette with one accent color, and light and dark modes.
   - Sketch the main screens in Figma or on paper: **Onboarding, Import, Transactions, Dashboard, Chat, Accounts, Settings**, plus the review queue (Phase 3).
   - Design principles to follow throughout:
     - **Value in under a minute.** First launch → demo data or first import → a categorized month, with no setup wizard.
     - **Every number is clickable.** Clicking "$412 Dining" opens those exact transactions. This is how users learn to trust the app.
     - **Fixing is one click.** Changing a category is a dropdown right in the table, never a separate edit screen.
-- [ ] **2.2 App layout**
+- [x] **2.2 App layout**
   - Sidebar navigation and a router (React Router or TanStack Router).
-- [ ] **2.3 Typed API client**
+- [x] **2.3 Typed API client**
   - FastAPI generates an OpenAPI description of every route automatically. `openapi-typescript` turns it into TypeScript types, so if a Python field is renamed, the UI build fails instead of breaking quietly at runtime.
   - Wrap requests with TanStack Query (handles loading states, caching and refetching).
-- [ ] **2.4 Onboarding**
+- [x] **2.4 Onboarding**
   - Welcome → a short privacy promise ("your data never leaves this computer") → choose currency → "Try demo data" or "Import my first statement."
-- [ ] **2.5 Import flow**
+- [x] **2.5 Import flow**
   - Drag a file onto the window (Tauri's file-drop event) or pick one (`tauri-plugin-dialog`).
   - Preview screen: detected columns with dropdowns to fix them, the first 10 rows parsed, and a choice of which account it belongs to.
   - Confirm → summary: "Added 84 transactions, skipped 12 duplicates."
-- [ ] **2.6 Transactions screen**
+- [x] **2.6 Transactions screen**
   - TanStack Table with row virtualization, so 10,000 rows scroll smoothly.
   - Search box, filters (account, month, category, needs review), and an inline category dropdown.
-- [ ] **2.7 Accounts screen**
+- [x] **2.7 Accounts screen**
   - Add, rename and delete accounts.
-- [ ] **2.8 Settings**
+- [x] **2.8 Settings**
   - Show where data is stored, **Export everything** (a copy of the database plus a CSV of all transactions), and **Delete everything** (with a typed confirmation). Owning your data means being able to take it or erase it.
 
 **Done when:** you can drop a CSV into the installed app, see the transactions, change a category, close the app, reopen it, and everything is still there.

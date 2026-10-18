@@ -61,6 +61,11 @@ def _stored(
             "SELECT id FROM transactions WHERE description_raw = ?", (description,)
         ).fetchone()[0]
         update_transaction(db, transaction_id, category_id=groceries)
+    # Nothing sets the review flag until automatic categorization (Phase 3), so set it here.
+    db.execute(
+        "UPDATE transactions SET needs_review = 1 "
+        "WHERE description_raw IN ('PAYROLL', '100% PURE JUICE')"
+    )
 
 
 def _descriptions(page: TransactionPage) -> list[str]:
@@ -99,6 +104,21 @@ def test_filters_by_category(db: sqlite3.Connection, groceries: int) -> None:
     assert _matching(db, category_id=groceries) == ["METRO #55", "LOBLAWS #1022"]
 
 
+def test_filters_by_whether_a_category_is_set(db: sqlite3.Connection, groceries: int) -> None:
+    categorized = ["METRO #55", "LOBLAWS #1022"]
+
+    assert _matching(db, categorized=True) == categorized
+    assert _matching(db, categorized=False) == [d for d in NEWEST_FIRST if d not in categorized]
+    assert _matching(db, categorized=False, category_id=groceries) == []
+
+
+def test_filters_by_the_review_flag(db: sqlite3.Connection) -> None:
+    flagged = ["PAYROLL", "100% PURE JUICE"]
+
+    assert _matching(db, needs_review=True) == flagged
+    assert _matching(db, needs_review=False) == [d for d in NEWEST_FIRST if d not in flagged]
+
+
 @pytest.mark.parametrize(
     ("search", "expected"),
     [
@@ -124,6 +144,9 @@ def test_blank_search_matches_everything(db: sqlite3.Connection) -> None:
 def test_filters_combine(db: sqlite3.Connection, card: Account, groceries: int) -> None:
     assert _matching(db, account_id=card.id, category_id=groceries, search="metro") == ["METRO #55"]
     assert _matching(db, account_id=card.id, search="loblaws") == []
+    assert _matching(db, needs_review=True, categorized=False, search="juice") == [
+        "100% PURE JUICE"
+    ]
 
 
 def test_pages_cover_every_row_exactly_once(db: sqlite3.Connection) -> None:

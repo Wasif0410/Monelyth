@@ -19,6 +19,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(engine::EngineManager::default())
         .invoke_handler(tauri::generate_handler![engine::get_engine_status])
         .setup(|app| {

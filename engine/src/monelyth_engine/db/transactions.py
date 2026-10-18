@@ -156,6 +156,19 @@ def list_transactions(
     return TransactionPage(items=tuple(_to_transaction(row) for row in rows), total=total)
 
 
+def transaction_date_range(
+    conn: sqlite3.Connection,
+) -> tuple[datetime.date, datetime.date] | None:
+    """The earliest and latest ``posted_date`` of all stored transactions, or ``None`` when
+    there are none yet."""
+    row = conn.execute("SELECT MIN(posted_date), MAX(posted_date) FROM transactions").fetchone()
+    first: str | None = row[0]
+    last: str | None = row[1]
+    if first is None or last is None:
+        return None
+    return datetime.date.fromisoformat(first), datetime.date.fromisoformat(last)
+
+
 def update_transaction(
     conn: sqlite3.Connection,
     transaction_id: int,
@@ -212,6 +225,11 @@ def _where_clause(filters: TransactionFilter) -> tuple[str, list[object]]:
     if filters.category_id is not None:
         clauses.append("category_id = ?")
         params.append(filters.category_id)
+    if filters.categorized is not None:
+        clauses.append("category_id IS NOT NULL" if filters.categorized else "category_id IS NULL")
+    if filters.needs_review is not None:
+        clauses.append("needs_review = ?")
+        params.append(int(filters.needs_review))
     search = (filters.search or "").strip()
     if search:
         # instr() rather than LIKE, so '%' and '_' in the search text are matched literally.

@@ -1,0 +1,1874 @@
+{
+  "components": {
+    "schemas": {
+      "AccountCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "institution": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "currency"
+        ],
+        "title": "AccountCreate",
+        "type": "object"
+      },
+      "AccountDeletionOut": {
+        "properties": {
+          "deleted_imports": {
+            "title": "Deleted Imports",
+            "type": "integer"
+          },
+          "deleted_transactions": {
+            "title": "Deleted Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted_imports",
+          "deleted_transactions"
+        ],
+        "title": "AccountDeletionOut",
+        "type": "object"
+      },
+      "AccountOut": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "institution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution"
+          },
+          "latest_transaction_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Transaction Date"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "net_amount_cents": {
+            "title": "Net Amount Cents",
+            "type": "integer"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "institution",
+          "type",
+          "currency",
+          "transaction_count",
+          "latest_transaction_date",
+          "net_amount_cents"
+        ],
+        "title": "AccountOut",
+        "type": "object"
+      },
+      "AccountType": {
+        "enum": [
+          "checking",
+          "savings",
+          "credit_card",
+          "other"
+        ],
+        "title": "AccountType",
+        "type": "string"
+      },
+      "AccountUpdate": {
+        "additionalProperties": false,
+        "description": "The user's edits. Leave a field out to keep it; a blank or null institution clears it.",
+        "properties": {
+          "institution": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "AccountUpdate",
+        "type": "object"
+      },
+      "Body_post_import_imports_post": {
+        "properties": {
+          "account_id": {
+            "minimum": 1.0,
+            "title": "Account Id",
+            "type": "integer"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Confirmed column layout as JSON. Required for CSV, refused for OFX.",
+            "title": "Layout"
+          }
+        },
+        "required": [
+          "file",
+          "account_id"
+        ],
+        "title": "Body_post_import_imports_post",
+        "type": "object"
+      },
+      "Body_post_import_preview_imports_preview_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A column layout to read the whole file with, as JSON in the shape POST /imports takes. CSV only. Without it, the engine detects the layout.",
+            "title": "Layout"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_post_import_preview_imports_preview_post",
+        "type": "object"
+      },
+      "CategoryKind": {
+        "enum": [
+          "income",
+          "expense",
+          "transfer"
+        ],
+        "title": "CategoryKind",
+        "type": "string"
+      },
+      "CategoryOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CategoryKind"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "parent_id"
+        ],
+        "title": "CategoryOut",
+        "type": "object"
+      },
+      "CategorySource": {
+        "description": "What assigned a transaction's category. ``USER`` is never overridden automatically.",
+        "enum": [
+          "memory",
+          "rule",
+          "classifier",
+          "llm",
+          "user"
+        ],
+        "title": "CategorySource",
+        "type": "string"
+      },
+      "CsvLayoutOut": {
+        "additionalProperties": false,
+        "description": "A CSV layout in exactly the shape ``POST /imports`` takes as ``layout``, except that\n``null`` marks a part the user still has to choose. Columns count from 0.",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "debit_credit": "#/components/schemas/DebitCreditOut",
+                    "signed": "#/components/schemas/SignedAmountOut"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/SignedAmountOut"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DebitCreditOut"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "date_column": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Column"
+          },
+          "date_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Format"
+          },
+          "decimal_separator": {
+            "enum": [
+              ".",
+              ","
+            ],
+            "title": "Decimal Separator",
+            "type": "string"
+          },
+          "delimiter": {
+            "enum": [
+              ",",
+              ";",
+              "\t"
+            ],
+            "title": "Delimiter",
+            "type": "string"
+          },
+          "description_column": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description Column"
+          },
+          "encoding": {
+            "enum": [
+              "utf-8-sig",
+              "cp1252"
+            ],
+            "title": "Encoding",
+            "type": "string"
+          },
+          "has_header": {
+            "title": "Has Header",
+            "type": "boolean"
+          },
+          "invert_signs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invert Signs"
+          },
+          "skip_rows": {
+            "title": "Skip Rows",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "encoding",
+          "delimiter",
+          "skip_rows",
+          "has_header",
+          "date_column",
+          "description_column",
+          "amount",
+          "date_format",
+          "decimal_separator",
+          "invert_signs"
+        ],
+        "title": "CsvLayoutOut",
+        "type": "object"
+      },
+      "CsvPreviewOut": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "date_formats": {
+            "items": {
+              "$ref": "#/components/schemas/DateFormatOut"
+            },
+            "title": "Date Formats",
+            "type": "array"
+          },
+          "layout": {
+            "$ref": "#/components/schemas/CsvLayoutOut"
+          },
+          "layout_source": {
+            "$ref": "#/components/schemas/LayoutSource"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/CsvQuestionOut"
+            },
+            "title": "Questions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "layout",
+          "layout_source",
+          "columns",
+          "questions",
+          "date_formats"
+        ],
+        "title": "CsvPreviewOut",
+        "type": "object"
+      },
+      "CsvQuestionKind": {
+        "description": "What the UI must ask before the file can be imported.",
+        "enum": [
+          "columns_guessed",
+          "no_date_column",
+          "no_description_column",
+          "no_amount_column",
+          "date_format_unknown",
+          "date_order_ambiguous",
+          "amount_format_unknown",
+          "sign_convention_unknown",
+          "row_unreadable"
+        ],
+        "title": "CsvQuestionKind",
+        "type": "string"
+      },
+      "CsvQuestionOut": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/CsvQuestionKind"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "message",
+          "options"
+        ],
+        "title": "CsvQuestionOut",
+        "type": "object"
+      },
+      "DateFormatOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "DateFormatOut",
+        "type": "object"
+      },
+      "DebitCreditOut": {
+        "additionalProperties": false,
+        "description": "Money out and money in sit in separate columns.",
+        "properties": {
+          "credit_column": {
+            "title": "Credit Column",
+            "type": "integer"
+          },
+          "debit_column": {
+            "title": "Debit Column",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "debit_credit",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "debit_column",
+          "credit_column"
+        ],
+        "title": "DebitCreditOut",
+        "type": "object"
+      },
+      "DemoCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency"
+        ],
+        "title": "DemoCreate",
+        "type": "object"
+      },
+      "DemoOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "imports": {
+            "items": {
+              "$ref": "#/components/schemas/ImportResultOut"
+            },
+            "title": "Imports",
+            "type": "array"
+          },
+          "transactions_added": {
+            "title": "Transactions Added",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accounts",
+          "imports",
+          "transactions_added"
+        ],
+        "title": "DemoOut",
+        "type": "object"
+      },
+      "EraseOut": {
+        "properties": {
+          "deleted_accounts": {
+            "title": "Deleted Accounts",
+            "type": "integer"
+          },
+          "deleted_transactions": {
+            "title": "Deleted Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted_accounts",
+          "deleted_transactions"
+        ],
+        "title": "EraseOut",
+        "type": "object"
+      },
+      "EraseRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "const": "DELETE",
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "EraseRequest",
+        "type": "object"
+      },
+      "ExportOut": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "transaction_count"
+        ],
+        "title": "ExportOut",
+        "type": "object"
+      },
+      "ExportRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "folder": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Folder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder"
+        ],
+        "title": "ExportRequest",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "ImportPreviewOut": {
+        "properties": {
+          "csv": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CsvPreviewOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "format": {
+            "$ref": "#/components/schemas/StatementFormat"
+          },
+          "previous_import": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviousImportOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "transaction_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Count"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "format",
+          "file_name",
+          "rows",
+          "transaction_count",
+          "currency",
+          "warnings",
+          "previous_import",
+          "csv"
+        ],
+        "title": "ImportPreviewOut",
+        "type": "object"
+      },
+      "ImportResultOut": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "integer"
+          },
+          "added": {
+            "title": "Added",
+            "type": "integer"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "format": {
+            "$ref": "#/components/schemas/StatementFormat"
+          },
+          "import_id": {
+            "title": "Import Id",
+            "type": "integer"
+          },
+          "skipped_duplicates": {
+            "title": "Skipped Duplicates",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "import_id",
+          "account_id",
+          "file_name",
+          "format",
+          "added",
+          "skipped_duplicates",
+          "warnings"
+        ],
+        "title": "ImportResultOut",
+        "type": "object"
+      },
+      "LayoutSource": {
+        "enum": [
+          "saved",
+          "detected",
+          "chosen"
+        ],
+        "title": "LayoutSource",
+        "type": "string"
+      },
+      "PreviewRowOut": {
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "merchant": {
+            "title": "Merchant",
+            "type": "string"
+          },
+          "posted_date": {
+            "format": "date",
+            "title": "Posted Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "posted_date",
+          "description",
+          "merchant",
+          "amount_cents"
+        ],
+        "title": "PreviewRowOut",
+        "type": "object"
+      },
+      "PreviousImportOut": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "integer"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "imported_at": {
+            "format": "date-time",
+            "title": "Imported At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "file_name",
+          "imported_at"
+        ],
+        "title": "PreviousImportOut",
+        "type": "object"
+      },
+      "SignedAmountOut": {
+        "additionalProperties": false,
+        "description": "One column holds every amount, negative for money out (unless ``invert_signs``).",
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "signed",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "column"
+        ],
+        "title": "SignedAmountOut",
+        "type": "object"
+      },
+      "StatementFormat": {
+        "enum": [
+          "csv",
+          "ofx"
+        ],
+        "title": "StatementFormat",
+        "type": "string"
+      },
+      "SystemInfoOut": {
+        "properties": {
+          "account_count": {
+            "title": "Account Count",
+            "type": "integer"
+          },
+          "data_folder": {
+            "title": "Data Folder",
+            "type": "string"
+          },
+          "database_path": {
+            "title": "Database Path",
+            "type": "string"
+          },
+          "database_size_bytes": {
+            "title": "Database Size Bytes",
+            "type": "integer"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "engine_version",
+          "data_folder",
+          "database_path",
+          "database_size_bytes",
+          "account_count",
+          "transaction_count"
+        ],
+        "title": "SystemInfoOut",
+        "type": "object"
+      },
+      "TransactionOut": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "integer"
+          },
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "category_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CategorySource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "description_raw": {
+            "title": "Description Raw",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "import_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Import Id"
+          },
+          "merchant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merchant"
+          },
+          "needs_review": {
+            "title": "Needs Review",
+            "type": "boolean"
+          },
+          "posted_date": {
+            "format": "date",
+            "title": "Posted Date",
+            "type": "string"
+          },
+          "transfer_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transfer Group"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "import_id",
+          "posted_date",
+          "amount_cents",
+          "description_raw",
+          "merchant",
+          "category_id",
+          "category_source",
+          "confidence",
+          "needs_review",
+          "transfer_group"
+        ],
+        "title": "TransactionOut",
+        "type": "object"
+      },
+      "TransactionPageOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "TransactionPageOut",
+        "type": "object"
+      },
+      "TransactionRangeOut": {
+        "properties": {
+          "first_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Date"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          }
+        },
+        "required": [
+          "first_date",
+          "last_date"
+        ],
+        "title": "TransactionRangeOut",
+        "type": "object"
+      },
+      "TransactionUpdate": {
+        "additionalProperties": false,
+        "description": "The user's edits. Leave a field out to keep its current value.",
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "merchant": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merchant"
+          }
+        },
+        "title": "TransactionUpdate",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Monelyth Engine",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/accounts": {
+      "get": {
+        "operationId": "get_accounts_accounts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountOut"
+                  },
+                  "title": "Response Get Accounts Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Accounts",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "post": {
+        "operationId": "post_account_accounts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Account",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/accounts/{account_id}": {
+      "delete": {
+        "description": "Delete the account with all of its imports and transactions. This can't be undone.",
+        "operationId": "remove_account_accounts__account_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Account",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_account_accounts__account_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Account",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/categories": {
+      "get": {
+        "operationId": "get_categories_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryOut"
+                  },
+                  "title": "Response Get Categories Categories Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Categories",
+        "tags": [
+          "categories"
+        ]
+      }
+    },
+    "/data/erase": {
+      "post": {
+        "description": "Delete every account, import, transaction and learned setting, leaving a new database.\n\nThe body is only validated: anything but `{\"confirm\": \"DELETE\"}` is rejected with 422.",
+        "operationId": "post_erase_data_erase_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EraseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EraseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Erase",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/data/export": {
+      "post": {
+        "description": "Write a copy of the database, a CSV of every transaction and a README to a new folder.",
+        "operationId": "post_export_data_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Export",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/demo": {
+      "post": {
+        "description": "Add a demo checking account and credit card with a year of made-up transactions.\n\nThe year ends today. The statements are imported exactly like an uploaded file.",
+        "operationId": "post_demo_demo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "The demo data was added before"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Demo",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "get_health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Health",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/imports": {
+      "post": {
+        "description": "Store a statement's transactions in an account, skipping ones already stored.",
+        "operationId": "post_import_imports_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_post_import_imports_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Import",
+        "tags": [
+          "imports"
+        ]
+      }
+    },
+    "/imports/preview": {
+      "post": {
+        "description": "Read a statement without saving anything, and say what the user still has to confirm.\n\nWith ``layout``, every row is read with it, so the rows and count match what importing would\nstore, and a row that doesn't fit is reported as an error naming the row.",
+        "operationId": "post_import_preview_imports_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_post_import_preview_imports_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Import Preview",
+        "tags": [
+          "imports"
+        ]
+      }
+    },
+    "/system/info": {
+      "get": {
+        "operationId": "get_system_info_system_info_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get System Info",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/transactions": {
+      "get": {
+        "operationId": "get_transactions_transactions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "description": "Inclusive",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Inclusive",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive",
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category Id"
+            }
+          },
+          {
+            "description": "false: only uncategorized transactions; true: only categorized ones",
+            "in": "query",
+            "name": "categorized",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "false: only uncategorized transactions; true: only categorized ones",
+              "title": "Categorized"
+            }
+          },
+          {
+            "description": "true: only the review queue; false: everything else",
+            "in": "query",
+            "name": "needs_review",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "true: only the review queue; false: everything else",
+              "title": "Needs Review"
+            }
+          },
+          {
+            "description": "Search text",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search text",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Transactions",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/transactions/range": {
+      "get": {
+        "description": "The dates of the oldest and newest stored transactions, e.g. to bound a month picker.",
+        "operationId": "get_transaction_range_transactions_range_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionRangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Transaction Range",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/transactions/{transaction_id}": {
+      "patch": {
+        "operationId": "patch_transaction_transactions__transaction_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "title": "Transaction Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Transaction",
+        "tags": [
+          "transactions"
+        ]
+      }
+    }
+  }
+}

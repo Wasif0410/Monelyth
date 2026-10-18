@@ -57,9 +57,45 @@ def test_filters_and_pagination(api: TestClient, seeded: dict[str, Any]) -> None
     assert len(page["items"]) == 1
 
 
+def test_filters_by_category_state_and_review_flag(api: TestClient, seeded: dict[str, Any]) -> None:
+    tx = _list(api)["items"][0]
+    groceries = next(c for c in api.get("/categories").json() if c["name"] == "Groceries")
+    response = api.patch(f"/transactions/{tx['id']}", json={"category_id": groceries["id"]})
+    assert response.status_code == 200, response.text
+
+    assert [t["id"] for t in _list(api, categorized="true")["items"]] == [tx["id"]]
+    assert _list(api, categorized="false")["total"] == 2
+    assert _list(api, categorized="false", category_id=groceries["id"])["total"] == 0
+    # Nothing is flagged for review until automatic categorization exists.
+    assert _list(api, needs_review="true")["total"] == 0
+    assert _list(api, needs_review="false")["total"] == 3
+
+
+def test_range_is_empty_without_transactions(api: TestClient) -> None:
+    response = api.get("/transactions/range")
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"first_date": None, "last_date": None}
+
+
+def test_range_spans_the_stored_transactions(api: TestClient, seeded: dict[str, Any]) -> None:
+    assert api.get("/transactions/range").json() == {
+        "first_date": "2026-09-01",
+        "last_date": "2026-09-03",
+    }
+
+
 @pytest.mark.parametrize(
     "params",
-    [{"limit": 0}, {"limit": 501}, {"offset": -1}, {"date_from": "yesterday"}, {"account_id": 0}],
+    [
+        {"limit": 0},
+        {"limit": 501},
+        {"offset": -1},
+        {"date_from": "yesterday"},
+        {"account_id": 0},
+        {"categorized": "maybe"},
+        {"needs_review": "maybe"},
+    ],
 )
 def test_invalid_list_parameters(
     api: TestClient, seeded: dict[str, Any], params: dict[str, Any]

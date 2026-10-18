@@ -115,6 +115,11 @@ class TransactionFilter:
     date_to: datetime.date | None = None
     """Inclusive."""
     category_id: int | None = None
+    categorized: bool | None = None
+    """``False`` matches only transactions without a category yet, ``True`` only those with
+    one. It combines with ``category_id`` like every other condition, so ``category_id``
+    together with ``categorized=False`` matches nothing."""
+    needs_review: bool | None = None
     search: str | None = None
     """Case-insensitive substring of the bank description or the merchant name. A blank
     string matches everything."""
