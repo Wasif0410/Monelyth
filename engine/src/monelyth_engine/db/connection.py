@@ -26,17 +26,28 @@ BUSY_TIMEOUT_SECONDS: Final = 5.0
 logger = logging.getLogger(__name__)
 
 
-def connect(path: Path) -> sqlite3.Connection:
+def connect(path: Path, *, check_same_thread: bool = True) -> sqlite3.Connection:
     """Open the database at ``path`` for reading and writing, creating and migrating it.
 
     The parent folder must already exist.
+
+    Args:
+        check_same_thread: keep Python's guard that only the creating thread may use the
+            connection. Pass ``False`` only when the connection may move between threads but
+            is never used by two at once (e.g. one web request whose setup and handler run on
+            different worker threads).
 
     Raises:
         SchemaVersionError: if the file was created by a newer version of Monelyth. The file
             is left untouched.
         sqlite3.Error: if the file cannot be opened or is not a database.
     """
-    conn = sqlite3.connect(path, timeout=BUSY_TIMEOUT_SECONDS, autocommit=True)
+    conn = sqlite3.connect(
+        path,
+        timeout=BUSY_TIMEOUT_SECONDS,
+        autocommit=True,
+        check_same_thread=check_same_thread,
+    )
     try:
         _configure(conn)
         # Check before anything that writes: switching to WAL changes the file header.

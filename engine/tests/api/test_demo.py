@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from monelyth_engine.api import demo as demo_api
+from monelyth_engine.api.errors import UNEXPECTED_ERROR_MESSAGE
 from monelyth_engine.demo import Month, generate
 from monelyth_engine.demo import loader as loader_module
 from monelyth_engine.demo.generator import Row
@@ -155,9 +156,12 @@ def test_is_atomic(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
         return real_commit(conn, account_id=account_id, file=file, layout=layout)
 
     monkeypatch.setattr(loader_module, "commit_import", fail_on_the_card)
-    with pytest.raises(RuntimeError, match="disk full"):
-        api.post("/demo", json={"currency": "CAD"})
 
+    response = api.post("/demo", json={"currency": "CAD"})
+
+    # The unexpected error reaches the UI as a readable 500, and nothing is half-created.
+    assert response.status_code == 500
+    assert response.json() == {"detail": UNEXPECTED_ERROR_MESSAGE}
     assert calls == 2
     assert api.get("/accounts").json() == []
     assert api.get("/transactions").json()["total"] == 0

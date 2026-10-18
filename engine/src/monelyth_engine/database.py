@@ -41,7 +41,13 @@ class Database:
 
     @contextmanager
     def connection(self) -> Generator[sqlite3.Connection]:
-        conn = connect(self.path)
+        """A connection for one request.
+
+        FastAPI runs a request's dependencies and its handler on worker threads that can
+        differ, so the connection may be opened on one thread and used on another. That is
+        safe because a request uses it from one thread at a time, so the thread check is off.
+        """
+        conn = connect(self.path, check_same_thread=False)
         try:
             yield conn
         finally:
