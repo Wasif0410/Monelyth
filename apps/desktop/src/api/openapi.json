@@ -838,6 +838,40 @@
         "title": "TransactionPageOut",
         "type": "object"
       },
+      "TransactionRangeOut": {
+        "properties": {
+          "first_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Date"
+          },
+          "last_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Date"
+          }
+        },
+        "required": [
+          "first_date",
+          "last_date"
+        ],
+        "title": "TransactionRangeOut",
+        "type": "object"
+      },
       "TransactionUpdate": {
         "additionalProperties": false,
         "description": "The user's edits. Leave a field out to keep its current value.",
@@ -1190,6 +1224,42 @@
             }
           },
           {
+            "description": "false: only uncategorized transactions; true: only categorized ones",
+            "in": "query",
+            "name": "categorized",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "false: only uncategorized transactions; true: only categorized ones",
+              "title": "Categorized"
+            }
+          },
+          {
+            "description": "true: only the review queue; false: everything else",
+            "in": "query",
+            "name": "needs_review",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "true: only the review queue; false: everything else",
+              "title": "Needs Review"
+            }
+          },
+          {
             "description": "Search text",
             "in": "query",
             "name": "q",
@@ -1255,6 +1325,28 @@
           }
         },
         "summary": "Get Transactions",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/transactions/range": {
+      "get": {
+        "description": "The dates of the oldest and newest stored transactions, e.g. to bound a month picker.",
+        "operationId": "get_transaction_range_transactions_range_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionRangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Transaction Range",
         "tags": [
           "transactions"
         ]

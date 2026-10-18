@@ -10,7 +10,11 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from monelyth_engine.api.deps import Connection
 from monelyth_engine.db.models import CategorySource, Transaction, TransactionFilter
-from monelyth_engine.db.transactions import list_transactions, update_transaction
+from monelyth_engine.db.transactions import (
+    list_transactions,
+    transaction_date_range,
+    update_transaction,
+)
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -63,6 +67,14 @@ class TransactionPageOut(BaseModel):
     """How many transactions match across all pages."""
 
 
+class TransactionRangeOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    first_date: datetime.date | None
+    """The oldest ``posted_date``; ``None`` (like ``last_date``) when nothing is stored yet."""
+    last_date: datetime.date | None
+
+
 class TransactionUpdate(BaseModel):
     """The user's edits. Leave a field out to keep its current value."""
 
@@ -85,6 +97,13 @@ def get_transactions(
     date_from: Annotated[datetime.date | None, Query(description="Inclusive")] = None,
     date_to: Annotated[datetime.date | None, Query(description="Inclusive")] = None,
     category_id: Annotated[int | None, Query(ge=1)] = None,
+    categorized: Annotated[
+        bool | None,
+        Query(description="false: only uncategorized transactions; true: only categorized ones"),
+    ] = None,
+    needs_review: Annotated[
+        bool | None, Query(description="true: only the review queue; false: everything else")
+    ] = None,
     q: Annotated[str | None, Query(max_length=200, description="Search text")] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -96,12 +115,23 @@ def get_transactions(
             date_from=date_from,
             date_to=date_to,
             category_id=category_id,
+            categorized=categorized,
+            needs_review=needs_review,
             search=q,
         ),
         limit=limit,
         offset=offset,
     )
     return TransactionPageOut(items=[TransactionOut.of(tx) for tx in page.items], total=page.total)
+
+
+@router.get("/range")
+def get_transaction_range(conn: Connection) -> TransactionRangeOut:
+    """The dates of the oldest and newest stored transactions, e.g. to bound a month picker."""
+    span = transaction_date_range(conn)
+    if span is None:
+        return TransactionRangeOut(first_date=None, last_date=None)
+    return TransactionRangeOut(first_date=span[0], last_date=span[1])
 
 
 @router.patch("/{transaction_id}")

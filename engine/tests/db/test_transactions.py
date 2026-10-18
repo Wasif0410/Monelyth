@@ -20,6 +20,7 @@ from monelyth_engine.db.transactions import (
     get_transaction,
     insert_transactions,
     list_transactions,
+    transaction_date_range,
     update_transaction,
 )
 from monelyth_engine.ingest.models import RawTransaction, StatementFormat
@@ -285,3 +286,17 @@ def test_update_needs_a_change(db: sqlite3.Connection, stored_id: int) -> None:
 def test_blank_merchant_is_rejected(db: sqlite3.Connection, stored_id: int) -> None:
     with pytest.raises(ValueError, match="must not be empty"):
         update_transaction(db, stored_id, merchant="   ")
+
+
+def test_date_range_is_none_without_transactions(db: sqlite3.Connection, account: Account) -> None:
+    assert transaction_date_range(db) is None
+
+
+def test_date_range_spans_every_account(
+    db: sqlite3.Connection, account: Account, import_statement: ImportStatement
+) -> None:
+    card = create_account(db, name="Visa", account_type=AccountType.CREDIT_CARD, currency="CAD")
+    import_statement([raw(14, -500, "COFFEE"), raw(2, -500, "COFFEE")], file_label="checking")
+    import_statement([raw(28, -900, "BOOKS", month=11)], file_label="card", account_id=card.id)
+
+    assert transaction_date_range(db) == (datetime.date(2026, 9, 2), datetime.date(2026, 11, 28))
