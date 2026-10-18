@@ -60,6 +60,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/categorization/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Categorization Run
+         * @description Categorize in the background; poll ``GET /categorization/status`` for progress.
+         *
+         *     A request made while a run is going is combined with any other waiting request into one
+         *     next run.
+         */
+        post: operations["post_categorization_run_categorization_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/categorization/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Categorization Status */
+        get: operations["get_categorization_status_categorization_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/data/erase": {
         parameters: {
             query?: never;
@@ -184,6 +224,136 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/review/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Accept
+         * @description Accept the suggested category of each listed transaction: it becomes your choice, leaves
+         *     the queue and is remembered for its merchant. Transactions that aren't waiting for review
+         *     with a suggestion are skipped and not counted.
+         */
+        post: operations["post_accept_review_accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/review/accept-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Accept All
+         * @description Accept every suggestion in the review queue that matches the filters.
+         */
+        post: operations["post_accept_all_review_accept_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/review/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review Summary */
+        get: operations["get_review_summary_review_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Rules
+         * @description Every rule in the order they are tried: yours first, then the defaults, each by priority
+         *     (highest first) and then the longest pattern first.
+         */
+        get: operations["get_rules_rules_get"];
+        put?: never;
+        /**
+         * Post Rule
+         * @description Add a rule. ``422`` if the pattern can't be used, ``409`` if you already have a rule with
+         *     the same pattern.
+         */
+        post: operations["post_rule_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Rule Preview
+         * @description How many stored transactions a pattern matches, without saving anything. ``422`` with a
+         *     readable message if the pattern can't be used.
+         */
+        post: operations["post_rule_preview_rules_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Rule
+         * @description Delete one of your rules. ``403`` for a default rule.
+         */
+        delete: operations["delete_rule_rules__rule_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch Rule
+         * @description Change one of your rules. ``403`` for a default rule.
+         */
+        patch: operations["patch_rule_rules__rule_id__patch"];
+        trace?: never;
+    };
     "/system/info": {
         parameters: {
             query?: never;
@@ -251,14 +421,110 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Patch Transaction */
+        /**
+         * Patch Transaction
+         * @description Edit a transaction. A category set here is yours: automatic categorization never changes
+         *     it, and it is remembered for the merchant, so later transactions from it get it too.
+         */
         patch: operations["patch_transaction_transactions__transaction_id__patch"];
+        trace?: never;
+    };
+    "/transactions/{transaction_id}/same-merchant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Same Merchant
+         * @description How many other transactions from this one's merchant would change if its category were
+         *     applied to them, e.g. to ask "Apply to all 14 from Blue Bottle?" after a correction.
+         */
+        get: operations["get_same_merchant_transactions__transaction_id__same_merchant_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transactions/{transaction_id}/same-merchant/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Apply To Same Merchant
+         * @description Give this transaction's category to the others from its merchant counted by
+         *     ``GET .../same-merchant``. Categories you set yourself are never changed.
+         */
+        post: operations["post_apply_to_same_merchant_transactions__transaction_id__same_merchant_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transfers/{transfer_group}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Transfer
+         * @description Unlink two transactions that were wrongly paired as a transfer; returns both, updated.
+         *
+         *     A side that was in Transfers only because of the link becomes uncategorized and needs
+         *     review; a category the user chose stays.
+         */
+        delete: operations["delete_transfer_transfers__transfer_group__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AcceptAllRequest
+         * @description Which part of the queue to accept, as for ``GET /transactions``. Every field left out
+         *     matches everything, so ``{}`` accepts every suggestion waiting for review.
+         */
+        AcceptAllRequest: {
+            /** Account Id */
+            account_id?: number | null;
+            /** Category Id */
+            category_id?: number | null;
+            /** Date From */
+            date_from?: string | null;
+            /** Date To */
+            date_to?: string | null;
+            /** Q */
+            q?: string | null;
+        };
+        /** AcceptRequest */
+        AcceptRequest: {
+            /** Transaction Ids */
+            transaction_ids: number[];
+        };
+        /** AcceptedOut */
+        AcceptedOut: {
+            /** Accepted */
+            accepted: number;
+        };
         /** AccountCreate */
         AccountCreate: {
             /** Currency */
@@ -309,6 +575,11 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** AppliedOut */
+        AppliedOut: {
+            /** Updated */
+            updated: number;
+        };
         /** Body_post_import_imports_post */
         Body_post_import_imports_post: {
             /** Account Id */
@@ -330,6 +601,27 @@ export interface components {
              * @description A column layout to read the whole file with, as JSON in the shape POST /imports takes. CSV only. Without it, the engine detects the layout.
              */
             layout?: string | null;
+        };
+        /** CategorizationRunRequest */
+        CategorizationRunRequest: {
+            /**
+             * Scope
+             * @default uncategorized
+             * @enum {string}
+             */
+            scope: "uncategorized" | "all";
+        };
+        /** CategorizationStatusOut */
+        CategorizationStatusOut: {
+            /** Last Error */
+            last_error: string | null;
+            /** Processed */
+            processed: number;
+            /** Runs Finished */
+            runs_finished: number;
+            state: components["schemas"]["WorkerState"];
+            /** Total */
+            total: number;
         };
         /**
          * CategoryKind
@@ -558,6 +850,86 @@ export interface components {
              */
             imported_at: string;
         };
+        /** ReviewSummaryOut */
+        ReviewSummaryOut: {
+            /** Waiting */
+            waiting: number;
+            /** With Suggestion */
+            with_suggestion: number;
+        };
+        /**
+         * RuleAuthor
+         * @enum {string}
+         */
+        RuleAuthor: "system" | "user";
+        /** RuleCreate */
+        RuleCreate: {
+            /** Category Id */
+            category_id: number;
+            /** @default contains */
+            match_type: components["schemas"]["RuleMatchType"];
+            /** Pattern */
+            pattern: string;
+            /**
+             * Priority
+             * @default 0
+             */
+            priority: number;
+        };
+        /**
+         * RuleMatchType
+         * @enum {string}
+         */
+        RuleMatchType: "contains" | "regex";
+        /** RuleOut */
+        RuleOut: {
+            /** Category Id */
+            category_id: number;
+            created_by: components["schemas"]["RuleAuthor"];
+            /** Id */
+            id: number;
+            match_type: components["schemas"]["RuleMatchType"];
+            /** Pattern */
+            pattern: string;
+            /** Priority */
+            priority: number;
+        };
+        /** RulePreviewOut */
+        RulePreviewOut: {
+            /** Examples */
+            examples: string[];
+            /** Matching */
+            matching: number;
+            /** User Set */
+            user_set: number;
+        };
+        /** RulePreviewRequest */
+        RulePreviewRequest: {
+            /** @default contains */
+            match_type: components["schemas"]["RuleMatchType"];
+            /** Pattern */
+            pattern: string;
+        };
+        /**
+         * RuleUpdate
+         * @description Leave a field out to keep its current value.
+         */
+        RuleUpdate: {
+            /** Category Id */
+            category_id?: number | null;
+            match_type?: components["schemas"]["RuleMatchType"] | null;
+            /** Pattern */
+            pattern?: string | null;
+            /** Priority */
+            priority?: number | null;
+        };
+        /** SameMerchantOut */
+        SameMerchantOut: {
+            /** Count */
+            count: number;
+            /** Merchant */
+            merchant: string | null;
+        };
         /**
          * SignedAmountOut
          * @description One column holds every amount, negative for money out (unless ``invert_signs``).
@@ -657,6 +1029,11 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /**
+         * WorkerState
+         * @enum {string}
+         */
+        WorkerState: "idle" | "queued" | "running";
     };
     responses: never;
     parameters: never;
@@ -801,6 +1178,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CategoryOut"][];
+                };
+            };
+        };
+    };
+    post_categorization_run_categorization_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategorizationRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategorizationStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_categorization_status_categorization_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategorizationStatusOut"];
                 };
             };
         };
@@ -997,6 +1427,242 @@ export interface operations {
             };
         };
     };
+    post_accept_review_accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_accept_all_review_accept_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptAllRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_summary_review_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewSummaryOut"];
+                };
+            };
+        };
+    };
+    get_rules_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"][];
+                };
+            };
+        };
+    };
+    post_rule_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_rule_preview_rules_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RulePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulePreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_rule_rules__rule_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_rule_rules__rule_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_system_info_system_info_get: {
         parameters: {
             query?: never;
@@ -1103,6 +1769,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_same_merchant_transactions__transaction_id__same_merchant_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transaction_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SameMerchantOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_apply_to_same_merchant_transactions__transaction_id__same_merchant_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transaction_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppliedOut"];
+                };
+            };
+            /** @description The transaction has no category */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_transfer_transfers__transfer_group__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transfer_group: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionOut"][];
                 };
             };
             /** @description Validation Error */

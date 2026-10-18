@@ -23,6 +23,7 @@ import {
   type ListQuery,
   type TransactionFilters,
 } from "@/screens/transactions/filters";
+import { useOfferSameMerchant } from "@/screens/transactions/sameMerchant";
 
 export type Transaction = Schemas["TransactionOut"];
 type TransactionPage = Schemas["TransactionPageOut"];
@@ -90,11 +91,13 @@ interface CategoryChange {
 
 /**
  * Set a transaction's category. The table shows the new category at once; if the engine
- * refuses, the row goes back to what it was and a toast says why.
+ * refuses, the row goes back to what it was and a toast says why. Once saved, the user is
+ * offered to give the category to the merchant's other transactions too.
  */
 export function useSetCategory() {
   const api = useApi();
   const queryClient = useQueryClient();
+  const offerSameMerchant = useOfferSameMerchant();
   return useMutation({
     mutationFn: ({ transaction, categoryId }: CategoryChange) =>
       unwrap(
@@ -129,6 +132,7 @@ export function useSetCategory() {
         queryKey: queryKeys.transactions,
         predicate: (query) => !isListIndependentOfCategory(query.queryKey),
       });
+      void offerSameMerchant(updated);
     },
   });
 }

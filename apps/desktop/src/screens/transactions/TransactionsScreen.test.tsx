@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { Toaster } from "sonner";
-import { beforeEach, describe, expect, it, type Mock } from "vitest";
+import { toast, Toaster } from "sonner";
+import { afterEach, beforeEach, describe, expect, it, type Mock } from "vitest";
 
 import { formatMoney } from "@/lib/format";
 import { paths } from "@/paths";
@@ -21,6 +21,11 @@ import { renderWithApi, type StubRoutes } from "@/test/renderWithApi";
 
 beforeEach(() => {
   stubLayout();
+});
+
+afterEach(() => {
+  // Sonner keeps toasts in a module-wide store; don't let one leak into the next test.
+  toast.dismiss();
 });
 
 type Rows = readonly Transaction[] | ((request: Request) => Response | Promise<Response>);
@@ -44,6 +49,8 @@ function renderScreen({
         "GET /categories": categories,
         "GET /transactions/range": range,
         "GET /transactions": listRoute,
+        // After a category change the screen asks about the merchant's other transactions.
+        "GET /transactions/3/same-merchant": { merchant: "Loblaws", count: 0 },
         ...routes,
       },
       extraRoutes: [{ path: paths.import, element: <p>Import screen</p> }],
@@ -293,6 +300,73 @@ describe("TransactionsScreen", () => {
     expect(screen.getByRole("combobox", { name: "Category for Loblaws" })).toHaveTextContent(
       "Uncategorized",
     );
+  });
+
+  it("offers to give a correction to the merchant's other transactions", async () => {
+    const { fetchMock } = renderScreen({
+      "PATCH /transactions/3": { ...groceries, category_id: 5, category_source: "user" },
+      "GET /transactions/3/same-merchant": { merchant: "Loblaws", count: 14 },
+      "POST /transactions/3/same-merchant/apply": { updated: 14 },
+    });
+    await screen.findByText("Loblaws");
+    await choose(screen.getByRole("combobox", { name: "Category for Loblaws" }), "Groceries");
+
+    expect(await screen.findByText("Apply Groceries to 14 more from Loblaws?")).toBeInTheDocument();
+    const listsBefore = listRequests(fetchMock).length;
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(await screen.findByText("Updated 14 more transactions")).toBeInTheDocument();
+    const applied = fetchMock.mock.calls.filter(([request]) => request.url.endsWith("/apply"));
+    expect(applied.map(([request]) => request.method)).toEqual(["POST"]);
+    await waitFor(() => {
+      expect(listRequests(fetchMock).length).toBeGreaterThan(listsBefore);
+    });
+  });
+
+  it("asks nothing when no other transaction from the merchant would change", async () => {
+    const { fetchMock } = renderScreen({
+      "PATCH /transactions/3": { ...groceries, category_id: 5, category_source: "user" },
+    });
+    await screen.findByText("Loblaws");
+    await choose(screen.getByRole("combobox", { name: "Category for Loblaws" }), "Groceries");
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([request]) => request.url.endsWith("/3/same-merchant")),
+      ).toBe(true);
+    });
+    expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
+  });
+
+  it("says why when applying to the merchant's other transactions fails", async () => {
+    renderScreen({
+      "PATCH /transactions/3": { ...groceries, category_id: 5, category_source: "user" },
+      "GET /transactions/3/same-merchant": { merchant: "Loblaws", count: 2 },
+      "POST /transactions/3/same-merchant/apply": () =>
+        Response.json({ detail: "The database is locked." }, { status: 503 }),
+    });
+    await screen.findByText("Loblaws");
+    await choose(screen.getByRole("combobox", { name: "Category for Loblaws" }), "Groceries");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Apply" }));
+
+    expect(await screen.findByText("Couldn't apply the category")).toBeInTheDocument();
+    expect(screen.getByText("The database is locked.")).toBeInTheDocument();
+  });
+
+  it("marks both sides of a transfer between the user's accounts", async () => {
+    const payment = transaction({
+      id: 7,
+      merchant: "Payment Thank You",
+      amount_cents: 50_000,
+      category_id: 19,
+      transfer_group: "t-1",
+    });
+    renderScreen({ rows: [payment, groceries] });
+
+    await screen.findByText("Payment Thank You");
+    expect(row("Payment Thank You").getByText("Transfer")).toBeInTheDocument();
+    expect(row("Loblaws").queryByText("Transfer")).not.toBeInTheDocument();
   });
 
   it("loads the next page when scrolled near the end", async () => {

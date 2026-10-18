@@ -7,6 +7,8 @@ import { paths } from "@/paths";
 import { AccountsScreen } from "@/screens/accounts/AccountsScreen";
 import { ImportScreen } from "@/screens/import/ImportScreen";
 import { OnboardingScreen } from "@/screens/onboarding/OnboardingScreen";
+import { ReviewScreen } from "@/screens/review/ReviewScreen";
+import { RulesScreen } from "@/screens/rules/RulesScreen";
 import { SettingsScreen } from "@/screens/settings/SettingsScreen";
 import { TransactionsScreen } from "@/screens/transactions/TransactionsScreen";
 
@@ -26,8 +28,10 @@ export function createAppRouter() {
           element: <AppLayout />,
           children: [
             { path: paths.transactions, element: <TransactionsScreen /> },
+            { path: paths.review, element: <ReviewScreen /> },
             { path: paths.import, element: <ImportScreen /> },
             { path: paths.accounts, element: <AccountsScreen /> },
+            { path: paths.rules, element: <RulesScreen /> },
             { path: paths.settings, element: <SettingsScreen /> },
           ],
         },
