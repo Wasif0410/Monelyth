@@ -255,6 +255,29 @@ export interface paths {
         patch: operations["patch_transaction_transactions__transaction_id__patch"];
         trace?: never;
     };
+    "/transfers/{transfer_group}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Transfer
+         * @description Unlink two transactions that were wrongly paired as a transfer; returns both, updated.
+         *
+         *     A side that was in Transfers only because of the link becomes uncategorized and needs
+         *     review; a category the user chose stays.
+         */
+        delete: operations["delete_transfer_transfers__transfer_group__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1103,6 +1126,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_transfer_transfers__transfer_group__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transfer_group: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionOut"][];
                 };
             };
             /** @description Validation Error */

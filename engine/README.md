@@ -41,6 +41,7 @@ Every route needs `Authorization: Bearer <token>`. Errors the user should see co
 | `GET /transactions` | Filter by `account_id`, `date_from`, `date_to` (inclusive), `category_id`, `categorized` (`false` = only uncategorized), `needs_review` (`true` = only the review queue) and search text `q`; conditions combine with AND. Newest first, paged with `limit`/`offset`, with the `total` match count |
 | `GET /transactions/range` | `first_date` and `last_date` of all stored transactions (both `null` when there are none) |
 | `PATCH /transactions/{id}` | Set the category and/or merchant name (marked as the user's choice) |
+| `DELETE /transfers/{transfer_group}` | Unlink two transactions wrongly paired as a transfer; returns both. A side in Transfers only because of the link becomes uncategorized and needs review; a category the user chose stays. `404` if they are no longer linked |
 | `GET /system/info` | Engine version, data folder, database size, and how many accounts and transactions there are |
 | `POST /data/export` | `{"folder": "<full path>"}`: writes a new `Monelyth export <date> <time>` folder there with a copy of the database (SQLite backup API), `transactions.csv` and a README; returns its `path` |
 | `POST /data/erase` | `{"confirm": "DELETE"}`: deletes all user data in one step and leaves a freshly seeded database |

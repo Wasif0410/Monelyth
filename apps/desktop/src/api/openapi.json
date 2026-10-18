@@ -1869,6 +1869,55 @@
           "transactions"
         ]
       }
+    },
+    "/transfers/{transfer_group}": {
+      "delete": {
+        "description": "Unlink two transactions that were wrongly paired as a transfer; returns both, updated.\n\nA side that was in Transfers only because of the link becomes uncategorized and needs\nreview; a category the user chose stays.",
+        "operationId": "delete_transfer_transfers__transfer_group__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transfer_group",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Transfer Group",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TransactionOut"
+                  },
+                  "title": "Response Delete Transfer Transfers  Transfer Group  Delete",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Transfer",
+        "tags": [
+          "transfers"
+        ]
+      }
     }
   }
 }

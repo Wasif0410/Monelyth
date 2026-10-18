@@ -15,6 +15,7 @@ from monelyth_engine.api import (
     health,
     imports,
     transactions,
+    transfers,
 )
 from monelyth_engine.api.errors import UnhandledErrorMiddleware, install_error_handlers
 from monelyth_engine.config import HOST, Settings
@@ -45,7 +46,7 @@ def create_app(settings: Settings) -> FastAPI:
     )
     app.state.database = database
     install_error_handlers(app)
-    for module in (health, accounts, categories, imports, transactions, data, demo):
+    for module in (health, accounts, categories, imports, transactions, transfers, data, demo):
         app.include_router(module.router)
 
     # Starlette runs the middleware added last first, so requests pass through, in order:
