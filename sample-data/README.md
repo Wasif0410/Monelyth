@@ -26,7 +26,7 @@ purchases, so deduplication must keep them.
 
 ## Regenerating
 
-The files are written by [`engine/scripts/generate_sample_data.py`](../engine/scripts/generate_sample_data.py).
+The files are written by [`engine/scripts/generate_sample_data.py`](../engine/scripts/generate_sample_data.py), a thin wrapper around the `monelyth_engine.demo` package. The app's "Try demo data" button uses the same generator, for the year ending today.
 A fixed seed drives it, so the same arguments always give byte-identical files. From the
 `engine` folder:
 

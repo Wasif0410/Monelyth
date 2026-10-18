@@ -1,23 +1,18 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Schemas } from "@/api/client";
 import type { Account } from "@/api/queries";
 import { formatMoney } from "@/lib/format";
 import { paths } from "@/paths";
 import { ImportScreen } from "@/screens/import/ImportScreen";
+import { makeAccount } from "@/test/fixtures";
 import { renderWithApi, type StubRoutes } from "@/test/renderWithApi";
 
 type Preview = Schemas["ImportPreviewOut"];
 type Layout = Schemas["CsvLayoutOut"];
 
-const CHECKING: Account = {
-  id: 1,
-  name: "Main Checking",
-  institution: null,
-  type: "checking",
-  currency: "CAD",
-};
+const CHECKING: Account = makeAccount({ id: 1, name: "Main Checking" });
 
 const LAYOUT: Layout = {
   version: 1,
@@ -150,15 +145,6 @@ function layoutSent(form: FormData): unknown {
   const layout = form.get("layout");
   return typeof layout === "string" ? JSON.parse(layout) : null;
 }
-
-beforeAll(() => {
-  // jsdom lacks the pointer-capture and scrolling APIs Radix Select calls.
-  Object.assign(Element.prototype, {
-    hasPointerCapture: () => false,
-    releasePointerCapture: () => undefined,
-    scrollIntoView: () => undefined,
-  });
-});
 
 beforeEach(() => {
   // Unstubbed after each test by the `unstubGlobals` setting.
@@ -367,13 +353,7 @@ describe("ImportScreen", () => {
       "GET /accounts": () => Response.json(accounts),
       "POST /accounts": async (request: Request) => {
         createdBody = await request.json();
-        const account: Account = {
-          id: 5,
-          name: "Everyday",
-          institution: null,
-          type: "savings",
-          currency: "CAD",
-        };
+        const account: Account = makeAccount({ id: 5, name: "Everyday", type: "savings" });
         accounts.push(account);
         return Response.json(account, { status: 201 });
       },

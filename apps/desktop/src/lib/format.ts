@@ -11,7 +11,14 @@ export function formatMoney(cents: number, currency: string, locale?: string): s
   const key = `${locale ?? ""}|${currency}`;
   let formatter = moneyFormatters.get(key);
   if (!formatter) {
-    formatter = new Intl.NumberFormat(locale, { style: "currency", currency });
+    formatter = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      // Amounts are stored in cents, so always show them. Some currencies (e.g. PKR) default
+      // to no decimals, which would silently round what the user sees.
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
     moneyFormatters.set(key, formatter);
   }
   // Intl accepts a decimal string, which keeps every cent exact.

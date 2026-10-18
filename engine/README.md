@@ -44,6 +44,7 @@ Every route needs `Authorization: Bearer <token>`. Errors the user should see co
 | `GET /system/info` | Engine version, data folder, database size, and how many accounts and transactions there are |
 | `POST /data/export` | `{"folder": "<full path>"}`: writes a new `Monelyth export <date> <time>` folder there with a copy of the database (SQLite backup API), `transactions.csv` and a README; returns its `path` |
 | `POST /data/erase` | `{"confirm": "DELETE"}`: deletes all user data in one step and leaves a freshly seeded database |
+| `POST /demo` | `{"currency": "CAD"}`: adds a "Demo Checking" account and a "Demo Visa" card with a year of made-up transactions ending today, imported exactly like an uploaded statement. `409` if the demo accounts already exist |
 
 Sample statements to try it with are in [`../sample-data/`](../sample-data/).
 

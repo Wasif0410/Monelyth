@@ -3,10 +3,11 @@ import { vi } from "vitest";
 
 import type { Account, Category } from "@/api/queries";
 import type { Transaction } from "@/screens/transactions/hooks";
+import { makeAccount } from "@/test/fixtures";
 
 export const accounts: Account[] = [
-  { id: 1, name: "Everyday Chequing", institution: "TD", type: "checking", currency: "CAD" },
-  { id: 2, name: "Travel Visa", institution: null, type: "credit_card", currency: "USD" },
+  makeAccount({ id: 1, name: "Everyday Chequing", institution: "TD", type: "checking" }),
+  makeAccount({ id: 2, name: "Travel Visa", type: "credit_card", currency: "USD" }),
 ];
 
 export const categories: Category[] = [
@@ -66,9 +67,9 @@ export const range = { first_date: "2026-08-03", last_date: "2026-10-02" };
 export const VIEWPORT_HEIGHT = 600;
 
 /**
- * jsdom does no layout: give elements a size (the virtualizer renders nothing in a 0px
- * viewport) and add the browser APIs Radix calls. Call in `beforeEach`; the spies and stubs
- * are restored after each test.
+ * jsdom does no layout: give elements a size, because the virtualizer renders nothing in a
+ * 0px viewport. (The Radix stubs live in src/test/setup.ts.) Call in `beforeEach`; the spies
+ * and stubs are restored after each test.
  */
 export function stubLayout() {
   vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(VIEWPORT_HEIGHT);
@@ -81,7 +82,4 @@ export function stubLayout() {
       disconnect = vi.fn();
     },
   );
-  Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn(() => false);
-  Element.prototype.releasePointerCapture = vi.fn();
 }

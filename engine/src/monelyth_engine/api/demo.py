@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import datetime
+import sqlite3
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
-from monelyth_engine.api.accounts import AccountOut
+from monelyth_engine.api.accounts import AccountOut, account_out
 from monelyth_engine.api.deps import Connection
 from monelyth_engine.api.imports import ImportResultOut
 from monelyth_engine.demo import DemoData, DemoDataExistsError, add_demo_data
@@ -35,10 +36,11 @@ class DemoOut(BaseModel):
     transactions_added: int
 
     @classmethod
-    def of(cls, data: DemoData) -> DemoOut:
+    def of(cls, conn: sqlite3.Connection, data: DemoData) -> DemoOut:
         imports = [ImportResultOut.of(item.outcome) for item in data.imports]
         return cls(
-            accounts=[AccountOut.of(item.account) for item in data.imports],
+            # Read after the imports, so the counts include the demo transactions.
+            accounts=[account_out(conn, item.account) for item in data.imports],
             imports=imports,
             transactions_added=sum(item.added for item in imports),
         )
@@ -58,7 +60,7 @@ def post_demo(body: DemoCreate, conn: Connection) -> DemoOut:
         data = add_demo_data(conn, currency=body.currency, today=_today())
     except DemoDataExistsError as error:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=str(error)) from None
-    return DemoOut.of(data)
+    return DemoOut.of(conn, data)
 
 
 def _today() -> datetime.date:

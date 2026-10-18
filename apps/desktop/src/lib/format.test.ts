@@ -18,6 +18,10 @@ describe("formatMoney", () => {
     expect(formatMoney(900719925474099, "USD", "en-US")).toBe("$9,007,199,254,740.99");
   });
 
+  it("always shows cents, even for currencies that usually hide them", () => {
+    expect(formatMoney(12345, "PKR", "en-US")).toBe("PKR 123.45");
+  });
+
   it("uses the currency given", () => {
     expect(formatMoney(1050, "EUR", "en-US")).toBe("€10.50");
   });

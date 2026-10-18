@@ -22,6 +22,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Account
+         * @description Delete the account with all of its imports and transactions. This can't be undone.
+         */
+        delete: operations["remove_account_accounts__account_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Account */
+        patch: operations["patch_account_accounts__account_id__patch"];
+        trace?: never;
+    };
     "/categories": {
         parameters: {
             query?: never;
@@ -33,6 +54,70 @@ export interface paths {
         get: operations["get_categories_categories_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data/erase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Erase
+         * @description Delete every account, import, transaction and learned setting, leaving a new database.
+         *
+         *     The body is only validated: anything but `{"confirm": "DELETE"}` is rejected with 422.
+         */
+        post: operations["post_erase_data_erase_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Export
+         * @description Write a copy of the database, a CSV of every transaction and a README to a new folder.
+         */
+        post: operations["post_export_data_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Demo
+         * @description Add a demo checking account and credit card with a year of made-up transactions.
+         *
+         *     The year ends today. The statements are imported exactly like an uploaded file.
+         */
+        post: operations["post_demo_demo_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -93,6 +178,23 @@ export interface paths {
          *     store, and a row that doesn't fit is reported as an error naming the row.
          */
         post: operations["post_import_preview_imports_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get System Info */
+        get: operations["get_system_info_system_info_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -167,6 +269,13 @@ export interface components {
             name: string;
             type: components["schemas"]["AccountType"];
         };
+        /** AccountDeletionOut */
+        AccountDeletionOut: {
+            /** Deleted Imports */
+            deleted_imports: number;
+            /** Deleted Transactions */
+            deleted_transactions: number;
+        };
         /** AccountOut */
         AccountOut: {
             /** Currency */
@@ -175,8 +284,14 @@ export interface components {
             id: number;
             /** Institution */
             institution: string | null;
+            /** Latest Transaction Date */
+            latest_transaction_date: string | null;
             /** Name */
             name: string;
+            /** Net Amount Cents */
+            net_amount_cents: number;
+            /** Transaction Count */
+            transaction_count: number;
             type: components["schemas"]["AccountType"];
         };
         /**
@@ -184,6 +299,16 @@ export interface components {
          * @enum {string}
          */
         AccountType: "checking" | "savings" | "credit_card" | "other";
+        /**
+         * AccountUpdate
+         * @description The user's edits. Leave a field out to keep it; a blank or null institution clears it.
+         */
+        AccountUpdate: {
+            /** Institution */
+            institution?: string | null;
+            /** Name */
+            name?: string | null;
+        };
         /** Body_post_import_imports_post */
         Body_post_import_imports_post: {
             /** Account Id */
@@ -312,6 +437,47 @@ export interface components {
              */
             kind: "debit_credit";
         };
+        /** DemoCreate */
+        DemoCreate: {
+            /** Currency */
+            currency: string;
+        };
+        /** DemoOut */
+        DemoOut: {
+            /** Accounts */
+            accounts: components["schemas"]["AccountOut"][];
+            /** Imports */
+            imports: components["schemas"]["ImportResultOut"][];
+            /** Transactions Added */
+            transactions_added: number;
+        };
+        /** EraseOut */
+        EraseOut: {
+            /** Deleted Accounts */
+            deleted_accounts: number;
+            /** Deleted Transactions */
+            deleted_transactions: number;
+        };
+        /** EraseRequest */
+        EraseRequest: {
+            /**
+             * Confirm
+             * @constant
+             */
+            confirm: "DELETE";
+        };
+        /** ExportOut */
+        ExportOut: {
+            /** Path */
+            path: string;
+            /** Transaction Count */
+            transaction_count: number;
+        };
+        /** ExportRequest */
+        ExportRequest: {
+            /** Folder */
+            folder: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -410,6 +576,21 @@ export interface components {
          * @enum {string}
          */
         StatementFormat: "csv" | "ofx";
+        /** SystemInfoOut */
+        SystemInfoOut: {
+            /** Account Count */
+            account_count: number;
+            /** Data Folder */
+            data_folder: string;
+            /** Database Path */
+            database_path: string;
+            /** Database Size Bytes */
+            database_size_bytes: number;
+            /** Engine Version */
+            engine_version: string;
+            /** Transaction Count */
+            transaction_count: number;
+        };
         /** TransactionOut */
         TransactionOut: {
             /** Account Id */
@@ -538,6 +719,72 @@ export interface operations {
             };
         };
     };
+    remove_account_accounts__account_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_account_accounts__account_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_categories_categories_get: {
         parameters: {
             query?: never;
@@ -554,6 +801,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CategoryOut"][];
+                };
+            };
+        };
+    };
+    post_erase_data_erase_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EraseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EraseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_export_data_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_demo_demo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoOut"];
+                };
+            };
+            /** @description The demo data was added before */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -640,6 +993,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_system_info_system_info_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemInfoOut"];
                 };
             };
         };

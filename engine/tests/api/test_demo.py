@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import sqlite3
+from collections.abc import Sequence
 from typing import Any, Final
 
 import pytest
@@ -10,6 +11,7 @@ from fastapi.testclient import TestClient
 from monelyth_engine.api import demo as demo_api
 from monelyth_engine.demo import Month, generate
 from monelyth_engine.demo import loader as loader_module
+from monelyth_engine.demo.generator import Row
 from monelyth_engine.ingest.csv_statement import CsvLayout
 from monelyth_engine.normalize import normalize_merchant
 from monelyth_engine.services.importing import ImportOutcome, StatementFile
@@ -52,6 +54,7 @@ def test_creates_two_accounts_with_a_year_of_transactions(api: TestClient) -> No
         "institution": None,
         "type": "checking",
         "currency": "CAD",
+        **_stats(EXPECTED.checking),
     }
     assert card == {
         "id": card["id"],
@@ -59,6 +62,7 @@ def test_creates_two_accounts_with_a_year_of_transactions(api: TestClient) -> No
         "institution": None,
         "type": "credit_card",
         "currency": "CAD",
+        **_stats(EXPECTED.card),
     }
     assert api.get("/accounts").json() == body["accounts"]
     checking_import, card_import = body["imports"]
@@ -160,3 +164,12 @@ def test_is_atomic(api: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(loader_module, "commit_import", real_commit)
     assert _add_demo(api)["transactions_added"] == len(EXPECTED.checking) + len(EXPECTED.card)
+
+
+def _stats(rows: Sequence[Row]) -> dict[str, object]:
+    """The account stats the response must report once ``rows`` are imported."""
+    return {
+        "transaction_count": len(rows),
+        "latest_transaction_date": max(row.posted for row in rows).isoformat(),
+        "net_amount_cents": sum(row.amount_cents for row in rows),
+    }

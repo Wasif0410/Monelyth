@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useLocation } from "react-router";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { Account } from "@/api/queries";
 import { queryKeys } from "@/api/queries";
@@ -74,18 +74,6 @@ function renderScreen(routes: Record<string, unknown>) {
     ],
   });
 }
-
-beforeAll(() => {
-  // Radix popups measure and scroll with APIs jsdom doesn't implement.
-  globalThis.ResizeObserver = class {
-    observe = () => undefined;
-    unobserve = () => undefined;
-    disconnect = () => undefined;
-  };
-  Element.prototype.hasPointerCapture = () => false;
-  Element.prototype.releasePointerCapture = () => undefined;
-  Element.prototype.scrollIntoView = () => undefined;
-});
 
 describe("AccountsScreen", () => {
   it("lists each account with its details and numbers", async () => {

@@ -45,11 +45,6 @@ async function jsonBody(request: Request): Promise<unknown> {
 
 beforeEach(() => {
   setLanguages(["en-CA"]);
-  // Radix Select scrolls the chosen option into view and tracks pointer capture, which jsdom
-  // does not implement.
-  Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn(() => false);
-  Element.prototype.releasePointerCapture = vi.fn();
 });
 
 describe("OnboardingScreen", () => {

@@ -39,6 +39,24 @@
         "title": "AccountCreate",
         "type": "object"
       },
+      "AccountDeletionOut": {
+        "properties": {
+          "deleted_imports": {
+            "title": "Deleted Imports",
+            "type": "integer"
+          },
+          "deleted_transactions": {
+            "title": "Deleted Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted_imports",
+          "deleted_transactions"
+        ],
+        "title": "AccountDeletionOut",
+        "type": "object"
+      },
       "AccountOut": {
         "properties": {
           "currency": {
@@ -60,9 +78,29 @@
             ],
             "title": "Institution"
           },
+          "latest_transaction_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Transaction Date"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "net_amount_cents": {
+            "title": "Net Amount Cents",
+            "type": "integer"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
           },
           "type": {
             "$ref": "#/components/schemas/AccountType"
@@ -73,7 +111,10 @@
           "name",
           "institution",
           "type",
-          "currency"
+          "currency",
+          "transaction_count",
+          "latest_transaction_date",
+          "net_amount_cents"
         ],
         "title": "AccountOut",
         "type": "object"
@@ -87,6 +128,39 @@
         ],
         "title": "AccountType",
         "type": "string"
+      },
+      "AccountUpdate": {
+        "additionalProperties": false,
+        "description": "The user's edits. Leave a field out to keep it; a blank or null institution clears it.",
+        "properties": {
+          "institution": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "AccountUpdate",
+        "type": "object"
       },
       "Body_post_import_imports_post": {
         "properties": {
@@ -455,6 +529,117 @@
         "title": "DebitCreditOut",
         "type": "object"
       },
+      "DemoCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency"
+        ],
+        "title": "DemoCreate",
+        "type": "object"
+      },
+      "DemoOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "imports": {
+            "items": {
+              "$ref": "#/components/schemas/ImportResultOut"
+            },
+            "title": "Imports",
+            "type": "array"
+          },
+          "transactions_added": {
+            "title": "Transactions Added",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accounts",
+          "imports",
+          "transactions_added"
+        ],
+        "title": "DemoOut",
+        "type": "object"
+      },
+      "EraseOut": {
+        "properties": {
+          "deleted_accounts": {
+            "title": "Deleted Accounts",
+            "type": "integer"
+          },
+          "deleted_transactions": {
+            "title": "Deleted Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted_accounts",
+          "deleted_transactions"
+        ],
+        "title": "EraseOut",
+        "type": "object"
+      },
+      "EraseRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "const": "DELETE",
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "EraseRequest",
+        "type": "object"
+      },
+      "ExportOut": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "transaction_count"
+        ],
+        "title": "ExportOut",
+        "type": "object"
+      },
+      "ExportRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "folder": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Folder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder"
+        ],
+        "title": "ExportRequest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -706,6 +891,44 @@
         ],
         "title": "StatementFormat",
         "type": "string"
+      },
+      "SystemInfoOut": {
+        "properties": {
+          "account_count": {
+            "title": "Account Count",
+            "type": "integer"
+          },
+          "data_folder": {
+            "title": "Data Folder",
+            "type": "string"
+          },
+          "database_path": {
+            "title": "Database Path",
+            "type": "string"
+          },
+          "database_size_bytes": {
+            "title": "Database Size Bytes",
+            "type": "integer"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "transaction_count": {
+            "title": "Transaction Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "engine_version",
+          "data_folder",
+          "database_path",
+          "database_size_bytes",
+          "account_count",
+          "transaction_count"
+        ],
+        "title": "SystemInfoOut",
+        "type": "object"
       },
       "TransactionOut": {
         "properties": {
@@ -1017,6 +1240,99 @@
         ]
       }
     },
+    "/accounts/{account_id}": {
+      "delete": {
+        "description": "Delete the account with all of its imports and transactions. This can't be undone.",
+        "operationId": "remove_account_accounts__account_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Account",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_account_accounts__account_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Account",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
     "/categories": {
       "get": {
         "operationId": "get_categories_categories_get",
@@ -1039,6 +1355,135 @@
         "summary": "Get Categories",
         "tags": [
           "categories"
+        ]
+      }
+    },
+    "/data/erase": {
+      "post": {
+        "description": "Delete every account, import, transaction and learned setting, leaving a new database.\n\nThe body is only validated: anything but `{\"confirm\": \"DELETE\"}` is rejected with 422.",
+        "operationId": "post_erase_data_erase_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EraseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EraseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Erase",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/data/export": {
+      "post": {
+        "description": "Write a copy of the database, a CSV of every transaction and a README to a new folder.",
+        "operationId": "post_export_data_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Export",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/demo": {
+      "post": {
+        "description": "Add a demo checking account and credit card with a year of made-up transactions.\n\nThe year ends today. The statements are imported exactly like an uploaded file.",
+        "operationId": "post_demo_demo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "The demo data was added before"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Demo",
+        "tags": [
+          "demo"
         ]
       }
     },
@@ -1144,6 +1589,27 @@
         "summary": "Post Import Preview",
         "tags": [
           "imports"
+        ]
+      }
+    },
+    "/system/info": {
+      "get": {
+        "operationId": "get_system_info_system_info_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get System Info",
+        "tags": [
+          "data"
         ]
       }
     },

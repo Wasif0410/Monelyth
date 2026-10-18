@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import sqlite3
 from typing import Annotated, Self
 
 from fastapi import APIRouter, status
@@ -45,7 +46,7 @@ class AccountOut(BaseModel):
     account held before the earliest imported transaction is unknown."""
 
     @classmethod
-    def of(cls, account: Account, stats: AccountStats = NO_TRANSACTIONS) -> AccountOut:
+    def of(cls, account: Account, stats: AccountStats) -> AccountOut:
         return cls(
             id=account.id,
             name=account.name,
@@ -108,7 +109,8 @@ def post_account(body: AccountCreate, conn: Connection) -> AccountOut:
         currency=body.currency,
         institution=body.institution,
     )
-    return AccountOut.of(account)
+    # A new account has nothing imported yet.
+    return AccountOut.of(account, NO_TRANSACTIONS)
 
 
 @router.patch("/{account_id}")
@@ -123,7 +125,13 @@ def patch_account(account_id: int, body: AccountUpdate, conn: Connection) -> Acc
                 body.institution if "institution" in body.model_fields_set else current.institution
             ),
         )
-        stats = account_stats(conn, account_id).get(account_id, NO_TRANSACTIONS)
+        result = account_out(conn, account)
+    return result
+
+
+def account_out(conn: sqlite3.Connection, account: Account) -> AccountOut:
+    """The response for one account, with stats read from the database now."""
+    stats = account_stats(conn, account.id).get(account.id, NO_TRANSACTIONS)
     return AccountOut.of(account, stats)
 
 
