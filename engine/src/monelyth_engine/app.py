@@ -18,6 +18,7 @@ from monelyth_engine.api import (
     review,
     rules,
     transactions,
+    transfers,
 )
 from monelyth_engine.api.categorization import CATEGORIZE_NEW_TRANSACTIONS
 from monelyth_engine.api.errors import UnhandledErrorMiddleware, install_error_handlers
@@ -55,7 +56,17 @@ def create_app(settings: Settings) -> FastAPI:
     app.state.database = database
     app.state.categorization = worker
     install_error_handlers(app)
-    for module in (health, accounts, categories, transactions, data, rules, review, categorization):
+    for module in (
+        health,
+        accounts,
+        categories,
+        transactions,
+        transfers,
+        data,
+        rules,
+        review,
+        categorization,
+    ):
         app.include_router(module.router)
     # These store new transactions: categorize them in the background once a request succeeds.
     for module in (imports, demo):

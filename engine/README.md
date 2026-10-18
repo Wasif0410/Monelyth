@@ -52,6 +52,7 @@ Every route needs `Authorization: Bearer <token>`. Errors the user should see co
 | `POST /rules` | `{"pattern", "match_type": "contains" \| "regex", "category_id", "priority"}`. `422` explains a pattern that can't be used, `409` if the user already has that pattern. Re-categorizes what the rule matches |
 | `PATCH /rules/{id}`, `DELETE /rules/{id}` | Change or delete one of the user's rules (`403` for a default rule). Both re-categorize what the rule matched before and matches now |
 | `POST /rules/preview` | `{"pattern", "match_type"}`: `matching` (stored transactions the pattern matches), `user_set` (of those, how many keep the category the user set) and a few `examples`. Saves nothing |
+| `DELETE /transfers/{transfer_group}` | Unlink two transactions wrongly paired as a transfer; returns both. A side in Transfers only because of the link becomes uncategorized and needs review; a category the user chose stays. `404` if they are no longer linked |
 | `GET /system/info` | Engine version, data folder, database size, and how many accounts and transactions there are |
 | `POST /data/export` | `{"folder": "<full path>"}`: writes a new `Monelyth export <date> <time>` folder there with a copy of the database (SQLite backup API), `transactions.csv` and a README; returns its `path` |
 | `POST /data/erase` | `{"confirm": "DELETE"}`: deletes all user data in one step and leaves a freshly seeded database |
