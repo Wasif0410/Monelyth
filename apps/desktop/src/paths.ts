@@ -3,7 +3,9 @@ export const paths = {
   home: "/",
   welcome: "/welcome",
   transactions: "/transactions",
+  review: "/review",
   import: "/import",
   accounts: "/accounts",
+  rules: "/rules",
   settings: "/settings",
 } as const;
