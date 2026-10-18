@@ -1,9 +1,10 @@
 import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { LoaderCircle } from "lucide-react";
+import { ArrowLeftRight, LoaderCircle } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import type { Account } from "@/api/queries";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -60,9 +61,12 @@ const columns = column.columns([
       const tx = row.original;
       return (
         <div className="min-w-0">
-          <p className="truncate font-medium" title={displayName(tx)}>
-            {displayName(tx)}
-          </p>
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="truncate font-medium" title={displayName(tx)}>
+              {displayName(tx)}
+            </p>
+            {tx.transfer_group !== null ? <TransferBadge /> : null}
+          </div>
           {tx.merchant !== null ? (
             <p className="text-muted-foreground truncate text-xs" title={tx.description_raw}>
               {tx.description_raw}
@@ -278,6 +282,19 @@ export function TransactionsTable({
         </TableBody>
       </table>
     </div>
+  );
+}
+
+/** Marks one side of money moved between the user's own accounts (set by transfer detection). */
+function TransferBadge() {
+  return (
+    <Badge
+      variant="secondary"
+      title="Money moved between your own accounts. It isn't counted as spending or income."
+    >
+      <ArrowLeftRight aria-hidden="true" />
+      Transfer
+    </Badge>
   );
 }
 
