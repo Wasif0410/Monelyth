@@ -88,6 +88,9 @@ export interface paths {
         /**
          * Post Import Preview
          * @description Read a statement without saving anything, and say what the user still has to confirm.
+         *
+         *     With ``layout``, every row is read with it, so the rows and count match what importing would
+         *     store, and a row that doesn't fit is reported as an error naming the row.
          */
         post: operations["post_import_preview_imports_preview_post"];
         delete?: never;
@@ -177,6 +180,11 @@ export interface components {
         Body_post_import_preview_imports_preview_post: {
             /** File */
             file: string;
+            /**
+             * Layout
+             * @description A column layout to read the whole file with, as JSON in the shape POST /imports takes. CSV only. Without it, the engine detects the layout.
+             */
+            layout?: string | null;
         };
         /**
          * CategoryKind
@@ -199,14 +207,51 @@ export interface components {
          * @enum {string}
          */
         CategorySource: "memory" | "rule" | "classifier" | "llm" | "user";
+        /**
+         * CsvLayoutOut
+         * @description A CSV layout in exactly the shape ``POST /imports`` takes as ``layout``, except that
+         *     ``null`` marks a part the user still has to choose. Columns count from 0.
+         */
+        CsvLayoutOut: {
+            /** Amount */
+            amount: (components["schemas"]["SignedAmountOut"] | components["schemas"]["DebitCreditOut"]) | null;
+            /** Date Column */
+            date_column: number | null;
+            /** Date Format */
+            date_format: string | null;
+            /**
+             * Decimal Separator
+             * @enum {string}
+             */
+            decimal_separator: "." | ",";
+            /**
+             * Delimiter
+             * @enum {string}
+             */
+            delimiter: "," | ";" | "\t";
+            /** Description Column */
+            description_column: number | null;
+            /**
+             * Encoding
+             * @enum {string}
+             */
+            encoding: "utf-8-sig" | "cp1252";
+            /** Has Header */
+            has_header: boolean;
+            /** Invert Signs */
+            invert_signs: boolean | null;
+            /** Skip Rows */
+            skip_rows: number;
+            /** Version */
+            version: number;
+        };
         /** CsvPreviewOut */
         CsvPreviewOut: {
             /** Columns */
             columns: string[];
-            /** Layout */
-            layout: {
-                [key: string]: components["schemas"]["JsonValue"];
-            };
+            /** Date Formats */
+            date_formats: components["schemas"]["DateFormatOut"][];
+            layout: components["schemas"]["CsvLayoutOut"];
             layout_source: components["schemas"]["LayoutSource"];
             /** Questions */
             questions: components["schemas"]["CsvQuestionOut"][];
@@ -224,6 +269,28 @@ export interface components {
             message: string;
             /** Options */
             options: string[];
+        };
+        /** DateFormatOut */
+        DateFormatOut: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+        };
+        /**
+         * DebitCreditOut
+         * @description Money out and money in sit in separate columns.
+         */
+        DebitCreditOut: {
+            /** Credit Column */
+            credit_column: number;
+            /** Debit Column */
+            debit_column: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "debit_credit";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -272,12 +339,11 @@ export interface components {
             /** Warnings */
             warnings: string[];
         };
-        JsonValue: unknown;
         /**
          * LayoutSource
          * @enum {string}
          */
-        LayoutSource: "saved" | "detected";
+        LayoutSource: "saved" | "detected" | "chosen";
         /** PreviewRowOut */
         PreviewRowOut: {
             /** Amount Cents */
@@ -305,6 +371,19 @@ export interface components {
              * Format: date-time
              */
             imported_at: string;
+        };
+        /**
+         * SignedAmountOut
+         * @description One column holds every amount, negative for money out (unless ``invert_signs``).
+         */
+        SignedAmountOut: {
+            /** Column */
+            column: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "signed";
         };
         /**
          * StatementFormat

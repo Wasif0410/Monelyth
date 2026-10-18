@@ -34,7 +34,7 @@ Every route needs `Authorization: Bearer <token>`. Errors the user should see co
 | `GET /health` | Liveness and version |
 | `GET /accounts`, `POST /accounts` | List and add accounts |
 | `GET /categories` | Default and user categories |
-| `POST /imports/preview` | Upload a statement (multipart `file`); returns the detected format, CSV layout and open questions, and the first rows. Saves nothing |
+| `POST /imports/preview` | Upload a statement (multipart `file`); returns the detected format, CSV layout, open questions and supported date formats, and the first rows. With an optional `layout` (JSON, as for `POST /imports`) every row is read with it, or `422` names the row that does not fit. Saves nothing |
 | `POST /imports` | Upload it again with `account_id` (and the confirmed CSV `layout` as JSON) to store it. `409` if the exact file was imported before; overlapping rows are skipped |
 | `GET /transactions` | Filter by `account_id`, `date_from`, `date_to`, `category_id`, `q`; paged with `limit`/`offset` |
 | `PATCH /transactions/{id}` | Set the category and/or merchant name (marked as the user's choice) |

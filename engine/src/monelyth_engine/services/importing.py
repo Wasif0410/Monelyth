@@ -51,6 +51,7 @@ _OFX_SNIFF_BYTES: Final = 4096
 """OFX announces itself in its first few lines: an ``OFXHEADER:`` line (1.x) or an
 ``<?OFX ...?>`` processing instruction and ``<OFX>`` root (2.x)."""
 _OFX_MARKERS: Final = (b"ofxheader:", b"<?ofx", b"<ofx>")
+_LAYOUT_FOR_NON_CSV: Final = "A column layout only applies to CSV files."
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,8 @@ class LayoutSource(StrEnum):
     """Taken from the layout the user confirmed for this bank's header before."""
     DETECTED = "detected"
     """Guessed from this file; the user should confirm it."""
+    CHOSEN = "chosen"
+    """Sent with the request: the layout the user is choosing in the UI."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,19 +151,29 @@ def detect_format(data: bytes) -> StatementFormat:
     )
 
 
-def preview_import(conn: sqlite3.Connection, file: StatementFile) -> ImportPreview:
+def preview_import(
+    conn: sqlite3.Connection, file: StatementFile, layout: CsvLayout | None = None
+) -> ImportPreview:
     """Read ``file`` without storing anything.
 
     For a CSV whose header matches a layout the user confirmed before, that layout is used, so
     a returning bank needs no questions. If the saved layout no longer reads the file (the bank
     changed its export), detection runs as for a new bank.
 
+    Args:
+        layout: a CSV layout the user is choosing. When given, the whole file is read with it,
+            exactly as :func:`commit_import` would, so the preview shows what will be stored.
+
     Raises:
-        StatementParseError: if the file can't be read as a statement at all.
+        ImportRequestError: if ``layout`` is given for a file that isn't CSV.
+        StatementParseError: if the file can't be read as a statement at all, or a row doesn't
+            fit ``layout`` (the message names the row).
     """
     previous = find_import(conn, file.sha256)
     statement_format = detect_format(file.data)
     if statement_format is StatementFormat.OFX:
+        if layout is not None:
+            raise ImportRequestError(_LAYOUT_FOR_NON_CSV)
         statement = parse_ofx(file.data)
         return ImportPreview(
             format=statement_format,
@@ -174,6 +187,20 @@ def preview_import(conn: sqlite3.Connection, file: StatementFile) -> ImportPrevi
         )
 
     detection = detect_csv(file.data)
+    if layout is not None:
+        return _csv_preview(
+            file,
+            previous,
+            statement=parse_csv(file.data, layout),
+            fallback_rows=(),
+            csv=CsvPreview(
+                layout=_draft_from_layout(layout),
+                layout_source=LayoutSource.CHOSEN,
+                columns=detection.columns,
+                questions=(),
+            ),
+        )
+
     saved = _saved_layout(conn, detection.header_signature)
     if saved is not None:
         try:
@@ -250,7 +277,7 @@ def commit_import(
         signature = _header_signature(file.data) if layout.has_header else None
     else:
         if layout is not None:
-            raise ImportRequestError("A column layout only applies to CSV files.")
+            raise ImportRequestError(_LAYOUT_FOR_NON_CSV)
         statement = parse_ofx(file.data)
 
     account = get_account(conn, account_id)
