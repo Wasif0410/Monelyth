@@ -267,6 +267,50 @@
         "title": "CsvQuestionOut",
         "type": "object"
       },
+      "DemoCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency"
+        ],
+        "title": "DemoCreate",
+        "type": "object"
+      },
+      "DemoOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "imports": {
+            "items": {
+              "$ref": "#/components/schemas/ImportResultOut"
+            },
+            "title": "Imports",
+            "type": "array"
+          },
+          "transactions_added": {
+            "title": "Transactions Added",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accounts",
+          "imports",
+          "transactions_added"
+        ],
+        "title": "DemoOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -796,6 +840,51 @@
         "summary": "Get Categories",
         "tags": [
           "categories"
+        ]
+      }
+    },
+    "/demo": {
+      "post": {
+        "description": "Add a demo checking account and credit card with a year of made-up transactions.\n\nThe year ends today. The statements are imported exactly like an uploaded file.",
+        "operationId": "post_demo_demo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "The demo data was added before"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Demo",
+        "tags": [
+          "demo"
         ]
       }
     },
