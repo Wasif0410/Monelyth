@@ -19,7 +19,7 @@ from typing import Final
 
 from monelyth_engine.categorize.memory import memory_key
 from monelyth_engine.categorize.models import CategorizationInput, Categorizer, Suggestion
-from monelyth_engine.categorize.tiers import PipelineExtensions, core_tiers
+from monelyth_engine.categorize.tiers import PipelineExtensions, close_tiers, core_tiers
 from monelyth_engine.db.atomic import atomic
 from monelyth_engine.db.categories import list_categories
 from monelyth_engine.db.categorization import (
@@ -213,13 +213,38 @@ def run_categorization(
 
     categories = list_categories(conn)
     memory = load_memory(conn)
-    tiers = core_tiers(memory, list_rules(conn))
+    optional: list[Categorizer] = []
     if extensions.optional_tiers is not None:
         try:
-            tiers.extend(extensions.optional_tiers(conn))
+            optional = list(extensions.optional_tiers(conn))
         except Exception:
             logger.exception("Could not set up the optional categorization tiers")
             result.problems.append("The optional categorization steps")
+    try:
+        _run_tiers(
+            conn,
+            scope,
+            [*core_tiers(memory, list_rules(conn)), *optional],
+            categories,
+            result,
+            on_progress=on_progress,
+            should_stop=should_stop,
+        )
+    finally:
+        close_tiers(optional)
+    return result
+
+
+def _run_tiers(
+    conn: sqlite3.Connection,
+    scope: RunScope,
+    tiers: list[Categorizer],
+    categories: list[Category],
+    result: RunResult,
+    *,
+    on_progress: ProgressCallback | None,
+    should_stop: Callable[[], bool] | None,
+) -> None:
     runner = TierRunner(tiers, categories)
 
     ids = [state.id for state in categorization_states(conn) if scope.includes(state)]
@@ -246,7 +271,6 @@ def run_categorization(
         result.needs_review,
         "; stopped early" if result.cancelled else "",
     )
-    return result
 
 
 def _input(row: CategorizationRow) -> CategorizationInput:

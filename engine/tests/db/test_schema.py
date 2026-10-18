@@ -29,6 +29,7 @@ EXPECTED_TABLES = {
     "rules",
     "csv_profiles",
     "chat_messages",
+    "transfer_unlinks",
 }
 
 DEFAULT_CATEGORIES = {

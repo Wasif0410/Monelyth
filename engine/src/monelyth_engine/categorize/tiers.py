@@ -7,8 +7,10 @@ Every run asks, in this order, and the first answer wins:
    defaults.
 3. :func:`~monelyth_engine.categorize.memory.learned_memory`: earlier confident answers from
    the classifier or LLM.
-4. The optional tiers from :attr:`PipelineExtensions.optional_tiers`, in the order given
-   (classifier, then LLM).
+4. The optional tiers from :attr:`PipelineExtensions.optional_tiers`, in the order given.
+   Today that is the local LLM, when one is configured (``MONELYTH_LLM_URL`` and
+   ``MONELYTH_LLM_MODEL``). There is no classifier tier: Laya was evaluated and wasn't
+   accurate enough to ship (``engine/research/laya_eval/RESULTS.md``).
 
 Anything left unanswered goes to the review queue. Before the tiers, each
 :attr:`PipelineExtensions.pre_passes` entry runs once (transfer linking).
@@ -20,16 +22,21 @@ function is the single place the app's tiers are configured; the background work
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
+from monelyth_engine.categorize.llm_tier import create_llm_categorizer
 from monelyth_engine.categorize.memory import learned_memory, user_memory
 from monelyth_engine.categorize.models import Categorizer
 from monelyth_engine.categorize.rules import RulesCategorizer
 from monelyth_engine.db.memory import MemoryEntry
 from monelyth_engine.db.rules import Rule
+from monelyth_engine.insights.transfers import link_transfers
+
+logger = logging.getLogger(__name__)
 
 TierFactory = Callable[[sqlite3.Connection], Sequence[Categorizer]]
 """Builds the optional tiers for one run.
@@ -73,17 +80,50 @@ class PipelineExtensions:
     pre_passes: tuple[PrePass, ...] = ()
 
 
-def installed_extensions() -> PipelineExtensions:
-    """The optional tiers and pre-passes this build of the app runs.
+@runtime_checkable
+class SupportsClose(Protocol):
+    """An optional tier holding something to release when its run ends, e.g. an HTTP client.
 
-    Plug the classifier and LLM tiers and the transfer pass in here, e.g.::
-
-        return PipelineExtensions(
-            optional_tiers=lambda conn: [classifier_tier, llm_tier],
-            pre_passes=(TransferLinking(),),
-        )
+    The pipeline calls :meth:`close` on every optional tier that has one once the run is over,
+    whether it finished, stopped early or failed.
     """
-    return PipelineExtensions()
+
+    def close(self) -> None: ...
+
+
+def close_tiers(tiers: Sequence[Categorizer]) -> None:
+    """Close every tier that holds resources, logging (not raising) if one fails to close."""
+    for tier in tiers:
+        if isinstance(tier, SupportsClose):
+            try:
+                tier.close()
+            except Exception:
+                logger.exception("Could not close the categorization tier %r", tier)
+
+
+class TransferLinking:
+    """Links money moved between the user's own accounts before any tier runs."""
+
+    @property
+    def name(self) -> str:
+        return "Transfer detection"
+
+    def run(self, conn: sqlite3.Connection) -> None:
+        linked = link_transfers(conn)
+        if linked:
+            logger.info("Linked %d transfer pair(s)", linked)
+
+
+def _optional_tiers(conn: sqlite3.Connection) -> list[Categorizer]:
+    del conn  # The LLM tier needs nothing from the database.
+    # Built per run, so an LLM server started after the engine is picked up next time.
+    llm = create_llm_categorizer()
+    return [] if llm is None else [llm]
+
+
+def installed_extensions() -> PipelineExtensions:
+    """The optional tiers and pre-passes this build of the app runs."""
+    return PipelineExtensions(optional_tiers=_optional_tiers, pre_passes=(TransferLinking(),))
 
 
 def core_tiers(memory: Mapping[str, MemoryEntry], rules: Sequence[Rule]) -> list[Categorizer]:

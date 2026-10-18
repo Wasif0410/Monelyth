@@ -19,7 +19,7 @@ import re
 import sqlite3
 import uuid
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Sequence, Set
 from dataclasses import dataclass
 from typing import Final
 
@@ -90,7 +90,8 @@ def link_transfers(conn: sqlite3.Connection) -> int:
     dates; remaining ties go to the older transactions.
 
     A transfer whose other side was deleted (with its account) is released first, so its
-    remaining side can pair again.
+    remaining side can pair again. Pairs the user unlinked (:func:`unlink_transfer`) are never
+    proposed again.
 
     Raises:
         NotFoundError: if the Transfers category does not exist.
@@ -98,7 +99,7 @@ def link_transfers(conn: sqlite3.Connection) -> int:
     with atomic(conn):
         category_id = _transfers_category_id(conn)
         _release_half_pairs(conn)
-        pairs = _pair_up(_unlinked_sides(conn, category_id))
+        pairs = _pair_up(_unlinked_sides(conn, category_id), _refused_pairs(conn))
         _link(conn, pairs, category_id)
     return len(pairs)
 
@@ -110,8 +111,7 @@ def unlink_transfer(conn: sqlite3.Connection, transfer_group: str) -> list[Trans
     back to uncategorized and into the review queue, so the user picks its real category; a
     category the user chose stays.
 
-    Unlinked pairs are not recorded anywhere yet, so until the user picks a category other
-    than Transfers for one of the sides, a later :func:`link_transfers` may pair them again.
+    The pair is remembered, so :func:`link_transfers` never pairs these two again.
 
     Raises:
         NotFoundError: if no transaction is linked under ``transfer_group``.
@@ -126,6 +126,7 @@ def unlink_transfer(conn: sqlite3.Connection, transfer_group: str) -> list[Trans
         ]
         if not ids:
             raise NotFoundError("These transactions are no longer linked as a transfer.")
+        _remember_refusal(conn, ids)
         conn.execute(
             "UPDATE transactions SET category_id = NULL, category_source = NULL, "
             "confidence = NULL, needs_review = 1 "
@@ -200,8 +201,40 @@ def _unlinked_sides(conn: sqlite3.Connection, category_id: int) -> list[_Side]:
     return sides
 
 
-def _pair_up(sides: Sequence[_Side]) -> list[_Pair]:
-    """Choose the pairs greedily, best first, using each transaction at most once.
+_PAIR_SIZE: Final = 2
+
+
+def _refused_pairs(conn: sqlite3.Connection) -> set[tuple[int, int]]:
+    """(outgoing id, incoming id) of every pair the user unlinked."""
+    return {
+        (row["outgoing_id"], row["incoming_id"])
+        for row in conn.execute("SELECT outgoing_id, incoming_id FROM transfer_unlinks")
+    }
+
+
+def _remember_refusal(conn: sqlite3.Connection, ids: Sequence[int]) -> None:
+    """Record an unlinked pair so it is never proposed again.
+
+    A group whose other side was deleted has one transaction left and nothing to remember.
+    """
+    if len(ids) != _PAIR_SIZE:
+        return
+    rows = conn.execute(
+        f"SELECT id, amount_cents FROM transactions WHERE id IN ({', '.join('?' * len(ids))})",  # noqa: S608
+        tuple(ids),
+    ).fetchall()
+    outgoing = [row["id"] for row in rows if row["amount_cents"] < 0]
+    incoming = [row["id"] for row in rows if row["amount_cents"] > 0]
+    if len(outgoing) == 1 and len(incoming) == 1:
+        conn.execute(
+            "INSERT OR IGNORE INTO transfer_unlinks (outgoing_id, incoming_id) VALUES (?, ?)",
+            (outgoing[0], incoming[0]),
+        )
+
+
+def _pair_up(sides: Sequence[_Side], refused: Set[tuple[int, int]] = frozenset()) -> list[_Pair]:
+    """Choose the pairs greedily, best first, using each transaction at most once, and never
+    a pair in ``refused`` (outgoing id, incoming id).
 
     Taking the best remaining pair each time also makes the result final: every possible
     pair that was passed over shares a transaction with a chosen one, so a second run over
@@ -228,6 +261,8 @@ def _pair_up(sides: Sequence[_Side]) -> list[_Pair]:
     chosen: list[_Pair] = []
     for pair in candidates:
         if pair.outgoing.id in taken or pair.incoming.id in taken:
+            continue
+        if (pair.outgoing.id, pair.incoming.id) in refused:
             continue
         taken.update((pair.outgoing.id, pair.incoming.id))
         chosen.append(pair)

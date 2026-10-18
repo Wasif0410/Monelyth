@@ -594,6 +594,40 @@ def test_an_unlinked_pair_the_user_recategorized_is_not_linked_again(
     assert_unlinked(ledger, paid)
 
 
+def test_an_unlinked_pair_is_never_linked_again(
+    ledger: Ledger, checking: Account, card: Account
+) -> None:
+    """Regression: without remembering the refusal, the next run paired them right back."""
+    paid = ledger.add(checking, day(22), -30_000, "ONLINE PAYMENT VISA")
+    received = ledger.add(card, day(23), 30_000, "PAYMENT - THANK YOU")
+    link_transfers(ledger.conn)
+    group = ledger.get(paid).transfer_group
+    assert group is not None
+
+    unlink_transfer(ledger.conn, group)
+
+    assert link_transfers(ledger.conn) == 0
+    assert_unlinked(ledger, paid)
+    assert_unlinked(ledger, received)
+
+
+def test_an_unlinked_side_can_still_pair_with_another_transaction(
+    ledger: Ledger, checking: Account, card: Account, transfers_id: int
+) -> None:
+    paid = ledger.add(checking, day(22), -30_000, "ONLINE PAYMENT VISA")
+    wrong = ledger.add(card, day(23), 30_000, "PAYMENT - THANK YOU")
+    link_transfers(ledger.conn)
+    group = ledger.get(paid).transfer_group
+    assert group is not None
+    unlink_transfer(ledger.conn, group)
+    right = ledger.add(card, day(24), 30_000, "PAYMENT RECEIVED")
+
+    assert link_transfers(ledger.conn) == 1
+
+    assert_linked(ledger, paid, right, transfers_id)
+    assert_unlinked(ledger, wrong)
+
+
 def test_unlinking_an_unknown_group_is_refused(ledger: Ledger) -> None:
     with pytest.raises(NotFoundError, match="no longer linked"):
         unlink_transfer(ledger.conn, "0" * 32)

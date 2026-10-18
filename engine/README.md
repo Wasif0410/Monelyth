@@ -52,7 +52,7 @@ Every route needs `Authorization: Bearer <token>`. Errors the user should see co
 | `POST /rules` | `{"pattern", "match_type": "contains" \| "regex", "category_id", "priority"}`. `422` explains a pattern that can't be used, `409` if the user already has that pattern. Re-categorizes what the rule matches |
 | `PATCH /rules/{id}`, `DELETE /rules/{id}` | Change or delete one of the user's rules (`403` for a default rule). Both re-categorize what the rule matched before and matches now |
 | `POST /rules/preview` | `{"pattern", "match_type"}`: `matching` (stored transactions the pattern matches), `user_set` (of those, how many keep the category the user set) and a few `examples`. Saves nothing |
-| `DELETE /transfers/{transfer_group}` | Unlink two transactions wrongly paired as a transfer; returns both. A side in Transfers only because of the link becomes uncategorized and needs review; a category the user chose stays. `404` if they are no longer linked |
+| `DELETE /transfers/{transfer_group}` | Unlink two transactions wrongly paired as a transfer; returns both. A side in Transfers only because of the link becomes uncategorized and needs review; a category the user chose stays. The pair is remembered and never linked again. `404` if they are no longer linked |
 | `GET /system/info` | Engine version, data folder, database size, and how many accounts and transactions there are |
 | `POST /data/export` | `{"folder": "<full path>"}`: writes a new `Monelyth export <date> <time>` folder there with a copy of the database (SQLite backup API), `transactions.csv` and a README; returns its `path` |
 | `POST /data/erase` | `{"confirm": "DELETE"}`: deletes all user data in one step and leaves a freshly seeded database |
@@ -104,6 +104,21 @@ the first transaction of each merchant). With memory and rules only, on the samp
 
 The sample data is generated, and the default rules were written with it in view, so these
 numbers flatter the rules; `private-data/labels.csv` gives the honest ones.
+
+### Local AI model (optional)
+
+The last categorization tier asks a local LLM about merchants nothing else recognised. It is off
+unless both variables are set, and only an address on this computer is accepted
+(`127.0.0.1`, `localhost` or `[::1]`), so transaction text can't leave the machine:
+
+| Variable | Example |
+|---|---|
+| `MONELYTH_LLM_URL` | `http://localhost:11434/v1` (Ollama) or `http://127.0.0.1:8080/v1` (llama.cpp `llama-server`) |
+| `MONELYTH_LLM_MODEL` | `qwen3:4b` |
+
+Any OpenAI-compatible chat-completions server works; answers are constrained with a JSON
+schema. There is no classifier tier between rules and the LLM: Laya was evaluated and wasn't
+accurate enough (see [`research/laya_eval/RESULTS.md`](research/laya_eval/RESULTS.md)).
 
 ## Command-line options
 

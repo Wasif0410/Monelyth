@@ -30,7 +30,7 @@ from monelyth_engine.categorize.evaluation import (
     study_corrections,
 )
 from monelyth_engine.categorize.models import Categorizer
-from monelyth_engine.categorize.tiers import core_tiers, installed_extensions
+from monelyth_engine.categorize.tiers import close_tiers, core_tiers, installed_extensions
 from monelyth_engine.db.categories import list_categories
 from monelyth_engine.db.memory import MemoryEntry
 from monelyth_engine.db.rules import list_rules
@@ -57,13 +57,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     paths = explicit if explicit else [path for path in DEFAULT_LABELS if path.exists()]
 
     conn = reference_database()
+    optional: list[Categorizer] = []
     try:
         categories = list_categories(conn)
         rules = list_rules(conn)
         extensions = installed_extensions()
-        optional = (
-            [] if extensions.optional_tiers is None else list(extensions.optional_tiers(conn))
-        )
+        if extensions.optional_tiers is not None:
+            optional = list(extensions.optional_tiers(conn))
 
         def build_tiers(memory: Mapping[str, MemoryEntry]) -> list[Categorizer]:
             return [*core_tiers(memory, rules), *optional]
@@ -79,6 +79,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             title = f"{_display(path)}: {len(labeled)} labeled transactions"
             reports.append(format_report(title, study))
     finally:
+        close_tiers(optional)
         conn.close()
 
     print("\n\n".join(reports))
