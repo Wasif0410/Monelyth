@@ -1,7 +1,16 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissions for the main window. The engine is managed from Rust, so the webview gets no shell access; it may only show native open and save dialogs.",
+  "description": "Permissions for the main window. The engine is managed from Rust, so the webview gets no shell access. It may show native open and save dialogs and notifications, read and write its own preferences store, and turn start-at-sign-in on or off.",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open", "dialog:allow-save"]
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "notification:default",
+    "store:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
+  ]
 }
