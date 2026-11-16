@@ -18,7 +18,7 @@ use tauri_plugin_store::StoreExt;
 pub const MAIN_WINDOW: &str = "main";
 /// Passed by the "start at sign-in" entry, so Monelyth starts in the tray, not on screen.
 pub const MINIMIZED_ARG: &str = "--minimized";
-/// Shared with the Settings screen (`src/screens/settings/desktopPreferences.ts`).
+/// Shared with the Settings screen (`src/desktop/preferences.ts`).
 pub const PREFERENCES_STORE: &str = "preferences.json";
 /// `true`: closing the window hides it and Monelyth keeps running in the tray.
 pub const CLOSE_TO_TRAY_KEY: &str = "closeToTray";
@@ -119,6 +119,7 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     }
     match event {
         WindowEvent::CloseRequested { api, .. } if close_to_tray(window.app_handle()) => {
+            log::info!("Window closed; hiding to the tray");
             api.prevent_close();
             if let Err(error) = window.hide() {
                 log::error!("Could not hide the window: {error}");
@@ -129,7 +130,10 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
         // Keeping running in the tray only ever hides the window, so once it is actually
         // destroyed the user has closed the app: quit explicitly, so nothing (such as the
         // tray icon) can keep the process and its engine alive without a window.
-        WindowEvent::Destroyed => window.app_handle().exit(0),
+        WindowEvent::Destroyed => {
+            log::info!("Window destroyed; quitting");
+            window.app_handle().exit(0);
+        }
         _ => {}
     }
 }

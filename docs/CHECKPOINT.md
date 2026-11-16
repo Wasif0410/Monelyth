@@ -23,14 +23,14 @@ uv). It is a real desktop app (own window, ~18 MB installer); the UI is drawn by
 | 1 Data engine (CSV/OFX import, merchant cleaning, dedupe) | Done | PR #2 |
 | 2 Screens (onboarding + demo data, import, transactions, accounts, settings) | Done | PR #3 |
 | 3 Categorization (memory, 138 rules, review queue, corrections, transfers, local-LLM tier) | Done (no classifier tier) | PR #4 |
-| Desktop feel (icon, tray, start at sign-in, window memory, notifications) | **In progress** | branch `desktop/native-feel` |
+| Desktop feel (icon, tray, start at sign-in, window memory, notifications) | Done, **PR open** (waiting on CI/merge) | branch `desktop/native-feel` |
 | 4 Insights and dashboard | Next | — |
 | 5 Local AI chat · 6 Packaging + v0.1 release · 7 PDF + autopilot · 8 Hardening | Later | — |
 
 `main` is protected: the three CI checks (Engine, Frontend, Shell + installer) must pass.
 Test suites at last run: engine ~1,390 pytest, UI 243 vitest, Rust 7 tests, all passing.
 
-## In progress: branch `desktop/native-feel` (committed locally, not pushed, no PR yet)
+## Desktop feel: branch `desktop/native-feel` (pushed, PR open)
 
 What it adds:
 - **Real app icon** (`src-tauri/icons/source/app-icon.svg`, all sizes generated with
@@ -48,12 +48,13 @@ Verified in the installed release build: icon in the title bar, single instance,
 (1000×700 at 200,150 restored exactly), close-to-tray hides and a relaunch restores, start at
 sign-in writes and removes the `HKCU\…\Run` entry. All UI tests and clippy pass.
 
-**Still to do before the PR:**
-1. Rebuild (`pnpm --dir apps/desktop tauri build`) and re-check closing: a normal close must quit
-   the app *and* engine; close-to-tray must only hide. The last change (`WindowEvent::Destroyed`
-   → `app.exit(0)` in `desktop.rs`) is a safety net for a one-off seen once in testing (window
-   destroyed, process kept running) that could not be reproduced in 8 attempts.
-2. Commit any fixes, push the branch, open the PR, enable auto-merge after CI.
+Closing re-verified on the final release build (2026-11-16), 10 runs each, launched through
+`explorer.exe`: a normal close quits the app and both engine processes (the PyInstaller launcher
+and the server); with close-to-tray on, the window is hidden (not destroyed), app and engine keep
+running, and a relaunch shows the same window with one instance. `desktop.rs` now logs "Window
+closed; hiding to the tray" / "Window destroyed; quitting", which makes this visible in the log.
+
+**Next:** once CI is green, merge the PR (merge commit), then start Phase 4.
 
 ## Open decisions and loose ends
 
@@ -87,6 +88,19 @@ sign-in writes and removes the `HKCU\…\Run` entry. All UI tests and clippy pas
 - **Gotcha:** processes started from inside the Claude desktop app inherit its package identity,
   so AppData is redirected to `%LOCALAPPDATA%\Packages\Claude_…\LocalCache\…` and the window
   groups under Claude's taskbar icon. Launch through `explorer.exe` to see the real behaviour.
+- **Gotcha (testing settings):** the same package identity also redirects *file writes* to
+  `%APPDATA%` from Claude's shells into `%LOCALAPPDATA%\Packages\Claude_…\LocalCache\Roaming\…`,
+  while reads still show the redirected copy. So editing `preferences.json` from a Claude shell
+  never reaches an app launched through `explorer.exe`. Run such test scripts themselves through
+  `explorer.exe` (e.g. a `.cmd` wrapper), and back up / restore the real file around them.
+  .NET's `Process.MainWindowHandle` is unreliable for hidden windows; check the saved handle with
+  `IsWindowVisible` / `IsWindow` instead (user32 calls only work outside Claude's sandbox).
+- **Gotcha (Rust builds):** run `cargo` / `pnpm tauri build` from PowerShell, not Git Bash (Git's
+  `/usr/bin/link` shadows the MSVC linker). On this machine the Visual Studio instance registry
+  (`C:\ProgramData\Microsoft\VisualStudio\Packages\_Instances`) is missing, so Rust can't find
+  `link.exe` on its own: wrap builds as
+  `cmd /c "\"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat\" >nul && pnpm tauri build"`.
+  (A Visual Studio Installer "Repair" would likely restore the registry.)
 - **Gotcha:** the shadcn CLI rewrites component imports to an npm package named `cn` and adds it
   as a dependency. Always point imports back at `@/lib/utils` and `pnpm remove cn`.
 - pnpm enforces a minimum release age: pick dependency versions at least a week old. Tauri npm
