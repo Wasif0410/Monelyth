@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Monelyth app icon. Source for `pnpm tauri icon`, which renders every platform size. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14a676"/>
+      <stop offset="1" stop-color="#0b7553"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded tile, inset so the shape reads well beside other Windows icons. -->
+  <rect x="64" y="64" width="896" height="896" rx="208" fill="url(#tile)"/>
+  <rect x="64" y="64" width="896" height="896" rx="208" fill="url(#shine)"/>
+  <!-- An "M" whose last stroke climbs higher than the first: a small growth chart. -->
+  <path d="M262 728 V430 L494 640 L762 268 V728"
+        fill="none" stroke="#ffffff" stroke-width="104" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

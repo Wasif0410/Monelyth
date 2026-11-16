@@ -3,6 +3,7 @@ import { ShieldCheck } from "lucide-react";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { DataLocationCard } from "@/screens/settings/DataLocationCard";
 import { DeleteEverythingCard } from "@/screens/settings/DeleteEverythingCard";
+import { DesktopCard } from "@/screens/settings/DesktopCard";
 import { ExportCard } from "@/screens/settings/ExportCard";
 import { useAppVersion, useSystemInfo } from "@/screens/settings/queries";
 
@@ -11,9 +12,10 @@ export function SettingsScreen() {
     <>
       <ScreenHeader
         title="Settings"
-        description="Where your data lives, and how to take it with you or erase it."
+        description="How Monelyth runs on your computer, where your data lives, and how to take it with you or erase it."
       />
       <div className="flex max-w-3xl flex-col gap-6">
+        <DesktopCard />
         <DataLocationCard />
         <ExportCard />
         <DeleteEverythingCard />

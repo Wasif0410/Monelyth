@@ -18,7 +18,9 @@
         "minWidth": 900,
         "minHeight": 600,
         "center": true,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "label": "main",
+        "visible": false
       }
     ],
     "security": {
